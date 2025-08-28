@@ -12,7 +12,9 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (status === "unauthenticated") router.replace("/login");
+    if (status === "authenticated") {
+      router.replace("/dashboard");
+    }
   }, [status, router]);
 
   useEffect(() => {

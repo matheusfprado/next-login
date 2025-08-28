@@ -3,7 +3,7 @@
 import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useEffect } from "react";
 
 export default function LoginPage() {
   const { data: session, status } = useSession();
@@ -13,9 +13,12 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  if (status === "authenticated") {
-    router.replace("/dashboard");
-  }
+  // Redireciona se já estiver logado
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.replace("/dashboard");
+    }
+  }, [status, router]);
 
   const handleLogin = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -35,6 +38,14 @@ export default function LoginPage() {
       router.replace("/dashboard");
     }
   };
+
+  if (status === "loading") {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <p className="text-gray-500 text-lg animate-pulse">Carregando...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-gray-100">
