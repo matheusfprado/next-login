@@ -1,11 +1,10 @@
-// src/app/api/auth/[...nextauth]/route.ts
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
+import bcrypt from "bcryptjs";
 
-// Handler do NextAuth
 const handler = NextAuth({
   adapter: PrismaAdapter(prisma),
   providers: [
@@ -20,19 +19,39 @@ const handler = NextAuth({
         password: { label: "Senha", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+        if (!credentials?.email || !credentials?.password) {
+          console.log("❌ Credenciais não fornecidas");
+          return null;
+        }
 
+        // Busca usuário pelo email
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
         });
 
-        if (!user) return null;
+        if (!user) {
+          console.log("❌ Usuário não encontrado:", credentials.email);
+          return null;
+        }
+        console.log("✅ Usuário encontrado:", user.email);
 
-        // Aqui você pode validar senha hash
-        // const isValid = await compare(credentials.password, user.password);
-        // if (!isValid) return null;
+        // Confere senha com bcrypt
+        const isValid = await bcrypt.compare(
+          credentials.password,
+          user.password
+        );
+        if (!isValid) {
+          console.log("❌ Senha inválida para usuário:", user.email);
+          return null;
+        }
 
-        return user;
+        console.log("✅ Login bem-sucedido:", user.email);
+
+        return {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+        };
       },
     }),
   ],
@@ -45,7 +64,9 @@ const handler = NextAuth({
       return token;
     },
     async session({ session, token }) {
-      if (token?.id) session.user.id = token.id as string;
+      if (token?.id) {
+        session.user.id = token.id;
+      }
       return session;
     },
   },
