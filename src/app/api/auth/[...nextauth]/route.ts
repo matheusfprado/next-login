@@ -1,17 +1,20 @@
 import NextAuth from "next-auth";
-import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import twilio from "twilio";
+
+// Configura Twilio
+const twilioClient = twilio(
+  process.env.TWILIO_ACCOUNT_SID!,
+  process.env.TWILIO_AUTH_TOKEN!
+);
 
 const handler = NextAuth({
   adapter: PrismaAdapter(prisma),
   providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }),
+    // Login tradicional com email e senha
     CredentialsProvider({
       name: "Credenciais",
       credentials: {
@@ -19,42 +22,60 @@ const handler = NextAuth({
         password: { label: "Senha", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          console.log("❌ Credenciais não fornecidas");
-          return null;
-        }
+        if (!credentials?.email || !credentials?.password) return null;
 
-        // Busca usuário pelo email
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
         });
+        if (!user || !user.password) return null;
 
-        if (!user) {
-          console.log("❌ Usuário não encontrado:", credentials.email);
-          return null;
-        }
-        console.log("✅ Usuário encontrado:", user.email);
-
-        // Confere senha com bcrypt
         const isValid = await bcrypt.compare(
           credentials.password,
           user.password
         );
-        if (!isValid) {
-          console.log("❌ Senha inválida para usuário:", user.email);
+        if (!isValid) return null;
+
+        return { id: user.id, name: user.name, email: user.email };
+      },
+    }),
+
+    // Login via OTP (telefone)
+    CredentialsProvider({
+      name: "Telefone (OTP)",
+      id: "otp-phone",
+      credentials: {
+        phone: { label: "Telefone", type: "text" },
+        code: { label: "Código", type: "text" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.phone || !credentials?.code) return null;
+
+        const { phone, code } = credentials;
+
+        try {
+          const verificationCheck = await twilioClient.verify
+            .services(process.env.TWILIO_VERIFY_SID!)
+            .verificationChecks.create({ to: phone, code });
+
+          if (verificationCheck.status !== "approved") {
+            console.log("Código OTP inválido");
+            return null;
+          }
+        } catch (err) {
+          console.error("Erro ao verificar OTP:", err);
           return null;
         }
 
-        console.log("✅ Login bem-sucedido:", user.email);
+        let user = await prisma.user.findFirst({ where: { phone } });
+        if (!user) {
+          user = await prisma.user.create({ data: { phone } });
+        }
 
-        return {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-        };
+        return { id: user.id, phone: user.phone };
       },
     }),
   ],
+
   session: { strategy: "jwt" },
   secret: process.env.NEXTAUTH_SECRET,
   pages: { signIn: "/login" },
@@ -64,13 +85,10 @@ const handler = NextAuth({
       return token;
     },
     async session({ session, token }) {
-      if (token?.id) {
-        session.user.id = token.id;
-      }
+      if (token?.id) session.user.id = token.id;
       return session;
     },
   },
 });
 
-// Export apenas os métodos HTTP
 export { handler as GET, handler as POST };

@@ -84,6 +84,14 @@ export default function LoginPage() {
           </button>
         </form>
 
+        {/* Botão de login por telefone */}
+        <button
+          onClick={() => router.push("/login-phone")}
+          className="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-xl shadow-md transition transform hover:scale-105"
+        >
+          Entrar com Telefone
+        </button>
+
         <Link
           href="/register"
           className="text-blue-600 hover:text-blue-800 text-center font-medium transition mt-2"
