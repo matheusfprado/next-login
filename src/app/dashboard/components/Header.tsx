@@ -1,37 +1,97 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
-
-import { signOut } from "next-auth/react";
-import { FiBell, FiUser } from "react-icons/fi";
+import React, { useState, useMemo } from "react";
+import { BellIcon } from "@heroicons/react/24/outline";
 
 interface HeaderProps {
-  title?: string;
-  subtitle?: string;
+  userEmail: string;
+  cryptos: any[]; // recebe o array de criptos do Dashboard
 }
 
-export default function Header({ title = "Dashboard", subtitle }: HeaderProps) {
+interface Crypto {
+  id: string;
+  name: string;
+  symbol: string;
+  price_change_percentage_24h: number;
+}
+
+export default function Header({ userEmail, cryptos }: HeaderProps) {
+  const username = userEmail.split("@")[0];
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  // Filtra moedas com queda maior que 5%
+  const cryptoDrops = useMemo(() => {
+    if (!cryptos || cryptos.length === 0) return [];
+    return cryptos.filter((coin: any) => coin.price_change_percentage_24h < -5);
+  }, [cryptos]);
+
   return (
-    <header className="flex flex-col sm:flex-row justify-between items-center bg-white p-6 rounded-xl shadow-md mb-6">
-      <div className="text-center sm:text-left mb-4 sm:mb-0">
-        <h1 className="text-3xl font-bold text-gray-900">{title}</h1>
-        {subtitle && <p className="text-gray-500 mt-1">{subtitle}</p>}
+    <header className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm relative">
+      <div>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
+          Workspace
+        </h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          Bem-vindo de volta, <span className="font-medium">{username}</span> 👋
+        </p>
       </div>
-      <div className="flex items-center space-x-4">
-        <button className="relative p-2 rounded-full hover:bg-gray-100 transition">
-          <FiBell className="text-gray-600 w-6 h-6" />
-          <span className="absolute top-0 right-0 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white bg-red-500 rounded-full">
-            3
-          </span>
-        </button>
-        <button className="p-2 rounded-full hover:bg-gray-100 transition">
-          <FiUser className="text-gray-600 w-6 h-6" />
-        </button>
+
+      <div className="flex items-center gap-6 relative">
+        {/* Botão de notificações */}
         <button
-          onClick={() => signOut({ callbackUrl: "/login" })}
-          className="relative px-6 py-2 rounded-lg font-semibold text-white bg-gradient-to-r from-blue-500 to-indigo-600 shadow-lg hover:from-indigo-600 hover:to-blue-500 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0.5"
+          className="relative p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          onClick={() => setDropdownOpen(!dropdownOpen)}
         >
-          Sair
-          <span className="absolute -inset-px rounded-lg border border-white opacity-25"></span>
+          <BellIcon className="w-6 h-6 text-gray-700 dark:text-gray-300" />
+          {cryptoDrops.length > 0 && (
+            <span className="absolute top-1.5 right-1.5 inline-flex h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white dark:ring-gray-900 animate-pulse"></span>
+          )}
         </button>
+
+        {/* Dropdown de quedas */}
+        {dropdownOpen && (
+          <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 shadow-lg rounded-xl border border-gray-200 dark:border-gray-700 z-50 p-4">
+            <h4 className="font-semibold text-gray-900 dark:text-white mb-3">
+              Quedas Recentes
+            </h4>
+            {cryptoDrops.length === 0 ? (
+              <p className="text-gray-500 dark:text-gray-400 text-sm">
+                Nenhuma queda significativa nas últimas 24h.
+              </p>
+            ) : (
+              <ul className="space-y-2 max-h-60 overflow-y-auto">
+                {cryptoDrops.map((coin: Crypto) => (
+                  <li
+                    key={coin.id}
+                    className="flex justify-between items-center p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+                  >
+                    <span className="font-medium text-gray-900 dark:text-white">
+                      {coin.name} ({coin.symbol.toUpperCase()})
+                    </span>
+                    <span className="text-red-500 font-semibold">
+                      {coin.price_change_percentage_24h.toFixed(2)}%
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
+        {/* Avatar */}
+        <div className="flex items-center gap-3 cursor-pointer group">
+          <div className="w-10 h-10 flex items-center justify-center rounded-full bg-gradient-to-r from-emerald-500 to-green-400 text-white font-semibold shadow-md group-hover:scale-105 transition-transform">
+            {username[0].toUpperCase()}
+          </div>
+          <div className="flex flex-col">
+            <span className="text-gray-900 dark:text-white font-medium group-hover:text-emerald-500 transition-colors">
+              {username}
+            </span>
+            <span className="text-gray-500 dark:text-gray-400 text-sm">
+              {userEmail}
+            </span>
+          </div>
+        </div>
       </div>
     </header>
   );

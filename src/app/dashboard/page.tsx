@@ -1,17 +1,22 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
+
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { fetchInvestmentNews } from "@/lib/news";
+import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
-import Sidebar from "./components/Sidebar"; // ajuste o caminho conforme sua pasta de components
-import Image from "next/image";
+import Loading from "../components/Loading";
+import CryptoTable from "./components/CryptoTable";
+import CryptoChart from "./components/CryptoChart";
+import { useEffect, useState } from "react";
+import CryptoNews from "./components/CryptoNews";
 
-export default function Dashboard() {
+export default function DashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [articles, setArticles] = useState<any[]>([]);
+
+  const [cryptos, setCryptos] = useState<any[]>([]);
+  const [exchangeRate, setExchangeRate] = useState(5.0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -21,71 +26,74 @@ export default function Dashboard() {
   }, [status, router]);
 
   useEffect(() => {
-    async function getNews() {
+    const fetchData = async () => {
+      setLoading(true);
+
       try {
-        const news = await fetchInvestmentNews();
-        setArticles(news);
+        // Delay de 2 segundos para simular carregamento
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+
+        const cachedRate = localStorage.getItem("exchangeRate");
+        if (cachedRate) {
+          setExchangeRate(Number(cachedRate));
+        } else {
+          const resRate = await fetch(
+            "https://api.exchangerate.host/latest?base=USD&symbols=BRL"
+          );
+          const jsonRate = await resRate.json();
+          if (jsonRate?.rates?.BRL) {
+            setExchangeRate(jsonRate.rates.BRL);
+            localStorage.setItem("exchangeRate", jsonRate.rates.BRL);
+          }
+        }
+
+        const cachedCryptos = localStorage.getItem("cryptos");
+        if (cachedCryptos) setCryptos(JSON.parse(cachedCryptos));
+
+        const res = await fetch("/api/cryptos");
+        if (!res.ok) throw new Error("Erro na API de cryptos");
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setCryptos(data);
+          localStorage.setItem("cryptos", JSON.stringify(data));
+        }
       } catch (err) {
         console.error(err);
       } finally {
         setLoading(false);
       }
-    }
-    getNews();
+    };
+
+    fetchData();
+    const interval = setInterval(fetchData, 60000);
+    return () => clearInterval(interval);
   }, []);
 
-  if (status === "loading" || loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <p className="text-gray-500 text-lg animate-pulse">Carregando...</p>
-      </div>
-    );
-  }
-
+  if (status === "loading") return <Loading />;
   if (!session) return null;
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      {/* Sidebar */}
+    <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
       <Sidebar />
-
-      {/* Conteúdo principal */}
-      <div className="flex-1 p-6">
-        {/* Header profissional */}
-        <Header title="InvestHub Dashboard" subtitle="Últimas notícias e insights de investimento" />
-
-        {/* Notícias */}
-        <h2 className="text-xl font-semibold text-gray-700 mb-4 mt-6">
-          Últimas notícias de investimento
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {articles.map((article) => (
-            <div
-              key={article.url}
-              className="p-4 bg-white rounded-lg shadow-md hover:shadow-xl transition"
-            >
-              {article.urlToImage && (
-                <Image
-                  src={article.urlToImage}
-                  alt={article.title}
-                  width={400}
-                  height={200}
-                  className="w-full h-40 object-cover rounded-md mb-2"
-                />
-              )}
-              <h3 className="font-semibold text-gray-800">{article.title}</h3>
-              <p className="text-gray-600 text-sm">{article.description}</p>
-              <a
-                href={article.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 text-sm mt-2 inline-block"
-              >
-                Leia mais
-              </a>
-            </div>
-          ))}
+      <div className="flex-1 flex flex-col">
+        <Header userEmail={session.user?.email || ""} cryptos={cryptos} />
+        <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-white shadow rounded p-4">
+            <h3 className="text-lg font-semibold mb-4">
+              Preço da Criptomoeda (Top 1)
+            </h3>
+            <CryptoChart cryptos={cryptos} exchangeRate={exchangeRate} />
+          </div>
+          <div className="bg-white shadow rounded p-4">
+            <h3 className="text-lg font-semibold mb-4">Top 10 Criptomoedas</h3>
+            <CryptoTable
+              cryptos={cryptos}
+              exchangeRate={exchangeRate}
+              loading={loading}
+            />
+          </div>
         </div>
+        <CryptoNews />
       </div>
     </div>
   );

@@ -3,22 +3,16 @@
 import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useState, FormEvent, useEffect } from "react";
+import { useState, FormEvent } from "react";
+import Loading from "../components/Loading";
 
 export default function LoginPage() {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
-  // Redireciona se já estiver logado
-  useEffect(() => {
-    if (status === "authenticated") {
-      router.replace("/dashboard");
-    }
-  }, [status, router]);
 
   const handleLogin = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -34,70 +28,86 @@ export default function LoginPage() {
 
     if (result?.error) {
       alert("Falha no login: email ou senha incorretos");
-    } else {
+    } else if (result?.ok) {
       router.replace("/dashboard");
     }
   };
 
-  if (status === "loading") {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <p className="text-gray-500 text-lg animate-pulse">Carregando...</p>
-      </div>
-    );
-  }
+  // Mostra loading só enquanto verifica sessão
+  if (status === "loading") return <Loading />;
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-gray-100">
-      <h1 className="text-4xl font-bold text-gray-800 mb-10 tracking-tight">
-        InvestHub
-      </h1>
-      <div className="flex flex-col gap-5 w-full max-w-md bg-white p-8 rounded-2xl shadow-lg">
-        <form onSubmit={handleLogin} className="flex flex-col gap-4 w-full">
-          <input
-            type="email"
-            name="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            required
-          />
-
-          <input
-            type="password"
-            name="password"
-            placeholder="Senha"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            required
-            minLength={6}
-          />
-
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-100 dark:bg-gray-900 px-4">
+      <div className="mx-auto w-full max-w-md rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800 shadow-lg p-8 space-y-6">
+        <div className="text-center">
+          <h1 className="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-emerald-500 to-green-400 bg-clip-text text-transparent mb-10">
+            InvestHub
+          </h1>
+          <p className="mt-2 text-gray-600 dark:text-gray-400">
+            Entre com sua conta para acessar o painel
+          </p>
+        </div>
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div className="space-y-2">
+            <label
+              htmlFor="email"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+            >
+              Email
+            </label>
+            <input
+              id="email"
+              type="email"
+              placeholder="seu@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="block w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-3 py-2 text-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-gray-500 text-gray-900 dark:text-white"
+            />
+          </div>
+          <div className="space-y-2">
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+            >
+              Senha
+            </label>
+            <input
+              id="password"
+              type="password"
+              placeholder="••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={6}
+              className="block w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-3 py-2 text-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-gray-500 text-gray-900 dark:text-white"
+            />
+          </div>
           <button
             type="submit"
             disabled={loading}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl shadow-md transition transform hover:scale-105"
+            className={`w-full rounded-xl bg-black px-4 py-2 text-white font-medium shadow-sm transition hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-400 ${
+              loading ? "opacity-70 cursor-not-allowed" : ""
+            }`}
           >
             {loading ? "Entrando..." : "Entrar"}
           </button>
         </form>
-
-        {/* Botão de login por telefone */}
         <button
           onClick={() => router.push("/login-phone")}
-          className="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-xl shadow-md transition transform hover:scale-105"
+          className="w-full rounded-xl bg-emerald-500 dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-gray-100 font-medium shadow-sm transition hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400"
         >
           Entrar com Telefone
         </button>
-
-        <Link
-          href="/register"
-          className="text-blue-600 hover:text-blue-800 text-center font-medium transition mt-2"
-        >
-          Não tem conta? Cadastre-se
-        </Link>
+        <div className="text-center text-sm text-gray-600 dark:text-gray-400">
+          Não tem conta?{" "}
+          <Link
+            href="/register"
+            className="font-medium text-gray-900 dark:text-gray-100 underline underline-offset-4 hover:text-gray-700 dark:hover:text-gray-300"
+          >
+            Cadastre-se
+          </Link>
+        </div>
       </div>
     </div>
   );

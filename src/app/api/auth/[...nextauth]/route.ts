@@ -1,3 +1,4 @@
+// app/api/auth/[...nextauth]/route.ts
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
@@ -5,7 +6,6 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import twilio from "twilio";
 
-// Configura Twilio
 const twilioClient = twilio(
   process.env.TWILIO_ACCOUNT_SID!,
   process.env.TWILIO_AUTH_TOKEN!
@@ -35,7 +35,11 @@ const handler = NextAuth({
         );
         if (!isValid) return null;
 
-        return { id: user.id, name: user.name, email: user.email };
+        return {
+          id: user.id,
+          name: user.name || null,
+          email: user.email,
+        };
       },
     }),
 
@@ -68,10 +72,18 @@ const handler = NextAuth({
 
         let user = await prisma.user.findFirst({ where: { phone } });
         if (!user) {
-          user = await prisma.user.create({ data: { phone } });
+          user = await prisma.user.create({
+            data: { phone, name: null, email: null },
+          });
         }
 
-        return { id: user.id, phone: user.phone };
+        // Retornando campos consistentes
+        return {
+          id: user.id,
+          name: user.name || null,
+          email: user.email || null,
+          phone: user.phone,
+        };
       },
     }),
   ],
@@ -79,6 +91,7 @@ const handler = NextAuth({
   session: { strategy: "jwt" },
   secret: process.env.NEXTAUTH_SECRET,
   pages: { signIn: "/login" },
+
   callbacks: {
     async jwt({ token, user }) {
       if (user) token.id = user.id;
