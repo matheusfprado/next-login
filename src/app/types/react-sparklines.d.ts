@@ -1,7 +1,10 @@
 declare module "react-sparklines" {
-  import { ComponentType, HTMLAttributes } from "react";
+  import { ComponentType, SVGAttributes } from "react";
 
-  export const Sparklines: ComponentType<HTMLAttributes<HTMLElement> & { data: number[] }>;
-  export const SparklinesLine: ComponentType<HTMLAttributes<SVGElement>>;
-  export const SparklinesSpots: ComponentType<HTMLAttributes<SVGElement>>;
+  export const Sparklines: ComponentType<{ data: number[] } & SVGAttributes<SVGElement>>;
+  export const SparklinesLine: ComponentType<SVGAttributes<SVGElement> & { style?: React.CSSProperties }>;
+  export const SparklinesSpots: ComponentType<SVGAttributes<SVGElement> & {
+    size?: number;
+    style?: React.CSSProperties;
+  }>;
 }
