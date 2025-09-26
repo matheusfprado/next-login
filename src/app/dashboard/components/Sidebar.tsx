@@ -4,14 +4,12 @@ import React, { useState } from "react";
 import { signOut } from "next-auth/react";
 import {
   HomeIcon,
-  HomeIcon as HomeIconSolid,
-  CreditCardIcon,
   UserIcon,
   Cog6ToothIcon,
   ArrowRightOnRectangleIcon,
-  BellIcon,
 } from "@heroicons/react/24/outline";
 import clsx from "clsx";
+import { Button } from "../../components/Button";
 
 export default function Sidebar() {
   const [active, setActive] = useState("Dashboard");
@@ -79,20 +77,24 @@ export default function Sidebar() {
       )}
       <aside
         className={clsx(
-          "bg-white dark:bg-gray-950 border-r border-gray-200 dark:border-gray-800 flex flex-col justify-between p-6 shadow-sm h-screen",
-          "fixed md:relative z-50 top-0 left-0 transform transition-transform duration-300 ease-in-out",
-          mobileOpen ? "translate-x-0 w-64" : "-translate-x-full md:translate-x-0 md:w-64"
+          "bg-white dark:bg-gray-950 border-r border-gray-200 dark:border-gray-800 flex flex-col justify-between p-6 shadow-sm",
+          "fixed top-0 left-0 h-screen z-50 transform transition-transform duration-300 ease-in-out",
+          mobileOpen
+            ? "translate-x-0 w-64"
+            : "-translate-x-full md:translate-x-0 md:w-64"
         )}
       >
-        <div>
+        <div className="flex flex-col flex-1">
           <h1 className="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-emerald-500 to-green-400 bg-clip-text text-transparent mb-10">
             InvestHub
           </h1>
-          <nav className="flex flex-col gap-1 mb-6 ">{mainMenu.map(renderMenuItem)}</nav>
-          <nav className="flex flex-col gap-1 hidden">{settingsMenu.map(renderMenuItem)}</nav>
+          <nav className="flex flex-col gap-1 mb-6 flex-1">
+            {mainMenu.map(renderMenuItem)}
+          </nav>
+          <nav className="flex flex-col gap-1 hidden">
+            {settingsMenu.map(renderMenuItem)}
+          </nav>
         </div>
-
-        {/* Logout */}
         <div className="mt-6">
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
@@ -105,7 +107,7 @@ export default function Sidebar() {
           </button>
         </div>
       </aside>
-      <button
+      <Button
         className="fixed top-4 left-4 z-50 md:hidden p-2 rounded-md bg-white dark:bg-gray-900 shadow-md"
         onClick={() => setMobileOpen(!mobileOpen)}
       >
@@ -113,7 +115,7 @@ export default function Sidebar() {
         <div className="w-6 h-0.5 bg-gray-800 dark:bg-gray-200 mb-1"></div>
         <div className="w-6 h-0.5 bg-gray-800 dark:bg-gray-200 mb-1"></div>
         <div className="w-6 h-0.5 bg-gray-800 dark:bg-gray-200"></div>
-      </button>
+      </Button>
     </>
   );
 }

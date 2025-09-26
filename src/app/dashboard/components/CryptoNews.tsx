@@ -3,7 +3,6 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
-
 interface NewsItem {
   title: string;
   source: string;
@@ -19,7 +18,7 @@ export default function CryptoNews() {
   useEffect(() => {
     const fetchNews = async () => {
       try {
-        const res = await fetch("/api/news"); // usa a API interna
+        const res = await fetch("/api/news");
         const data = await res.json();
 
         if (Array.isArray(data.items)) {
@@ -77,7 +76,6 @@ export default function CryptoNews() {
             rel="noopener noreferrer"
             className="group block rounded-xl overflow-hidden shadow hover:shadow-lg transition"
           >
-            {/* Imagem */}
             <div className="relative h-48 w-full">
               {item.enclosure?.link ? (
                 <Image
@@ -93,8 +91,6 @@ export default function CryptoNews() {
                 </div>
               )}
             </div>
-
-            {/* Conteúdo */}
             <div className="p-4 bg-white dark:bg-gray-800">
               <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2 group-hover:text-blue-500 transition-colors">
                 {item.title}

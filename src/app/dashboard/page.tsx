@@ -30,9 +30,7 @@ export default function DashboardPage() {
       setLoading(true);
 
       try {
-        // Delay de 2 segundos para simular carregamento
         await new Promise((resolve) => setTimeout(resolve, 2000));
-
         const cachedRate = localStorage.getItem("exchangeRate");
         if (cachedRate) {
           setExchangeRate(Number(cachedRate));
@@ -46,7 +44,6 @@ export default function DashboardPage() {
             localStorage.setItem("exchangeRate", jsonRate.rates.BRL);
           }
         }
-
         const cachedCryptos = localStorage.getItem("cryptos");
         if (cachedCryptos) setCryptos(JSON.parse(cachedCryptos));
 
@@ -75,7 +72,7 @@ export default function DashboardPage() {
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
       <Sidebar />
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col md:ml-64 transition-all duration-300">
         <Header userEmail={session.user?.email || ""} cryptos={cryptos} />
         <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-white shadow rounded p-4">

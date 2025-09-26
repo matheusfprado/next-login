@@ -35,7 +35,6 @@ export default function CryptoChart({ cryptos, exchangeRate }: CryptoChartProps)
 
   return (
     <div className="p-6 bg-white dark:bg-gray-900 rounded-2xl shadow-md">
-      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
         <div>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -85,8 +84,6 @@ export default function CryptoChart({ cryptos, exchangeRate }: CryptoChartProps)
           </div>
         </div>
       </div>
-
-      {/* Informações de preço */}
       {currentPrice && (
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-2">
           <div className="flex flex-col">
@@ -105,8 +102,6 @@ export default function CryptoChart({ cryptos, exchangeRate }: CryptoChartProps)
           </div>
         </div>
       )}
-
-      {/* Gráfico */}
       <ResponsiveContainer width="100%" height={220}>
         <AreaChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
           <defs>
