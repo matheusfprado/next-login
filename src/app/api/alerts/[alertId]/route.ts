@@ -11,11 +11,24 @@ const updateSchema = z.object({
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { alertId: string } }
+  context: {
+    params?: Promise<Record<string, string | string[] | undefined>>;
+  }
 ) {
+  const params = context.params ? await context.params : undefined;
+  const alertId = Array.isArray(params?.alertId)
+    ? params?.alertId[0]
+    : params?.alertId;
   const session = await getServerSession(authOptions);
   if (!session?.user) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  }
+
+  if (!alertId) {
+    return NextResponse.json(
+      { error: "ID do alerta não fornecido" },
+      { status: 400 }
+    );
   }
 
   const body = await req.json();
@@ -28,7 +41,7 @@ export async function PATCH(
   }
 
   const result = await prisma.priceAlert.updateMany({
-    where: { id: params.alertId, userId: session.user.id },
+    where: { id: alertId, userId: session.user.id },
     data: {
       status: parsed.data.status,
     },
@@ -39,7 +52,7 @@ export async function PATCH(
   }
 
   const updated = await prisma.priceAlert.findUnique({
-    where: { id: params.alertId },
+    where: { id: alertId },
   });
 
   return NextResponse.json(updated);
@@ -47,15 +60,28 @@ export async function PATCH(
 
 export async function DELETE(
   _req: Request,
-  { params }: { params: { alertId: string } }
+  context: {
+    params?: Promise<Record<string, string | string[] | undefined>>;
+  }
 ) {
+  const params = context.params ? await context.params : undefined;
+  const alertId = Array.isArray(params?.alertId)
+    ? params?.alertId[0]
+    : params?.alertId;
   const session = await getServerSession(authOptions);
   if (!session?.user) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
 
+  if (!alertId) {
+    return NextResponse.json(
+      { error: "ID do alerta não fornecido" },
+      { status: 400 }
+    );
+  }
+
   const result = await prisma.priceAlert.deleteMany({
-    where: { id: params.alertId, userId: session.user.id },
+    where: { id: alertId, userId: session.user.id },
   });
 
   if (result.count === 0) {
