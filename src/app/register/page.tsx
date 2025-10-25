@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { hash } from "bcryptjs";
 import { FormProvider, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -50,17 +49,17 @@ export default function RegisterPage() {
     setLoading(true);
     setTransition(true);
 
-    const hashedPassword = await hash(data.password, 10);
-
     const res = await fetch("/api/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: data.email, password: hashedPassword }),
+      body: JSON.stringify({ email: data.email, password: data.password }),
     });
 
-    if (res.ok) router.push("/login");
-    else {
-      alert("Erro ao cadastrar usuário");
+    if (res.ok) {
+      router.push("/login");
+    } else {
+      const error = await res.json().catch(() => null);
+      alert(error?.error ?? "Erro ao cadastrar usuário");
       setTransition(false);
       setLoading(false);
     }
@@ -77,7 +76,7 @@ export default function RegisterPage() {
       {loading ? (
         <Loading />
       ) : (
-        <div className="flex min-h-screen items-center justify-center bg-gray-100 dark:bg-gray-900 px-4">
+        <div className="flex min-h-screen items-center justify-center bg-gray-100 px-4">
           <AnimatePresence>
             <motion.div
               key={transition ? "card-transition" : "card"}
@@ -85,13 +84,13 @@ export default function RegisterPage() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -50, scale: 0.9 }}
               transition={{ duration: 0.5 }}
-              className="relative z-10 mx-auto w-full max-w-md rounded-3xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-2xl p-10 space-y-6"
+              className="relative z-10 mx-auto w-full max-w-md rounded-3xl border border-gray-200 bg-white shadow-2xl p-10 space-y-6"
             >
               <div className="text-center">
                 <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-emerald-500 to-green-400 bg-clip-text text-transparent mb-2">
                   InvestHub
                 </h1>
-                <p className="mt-2 text-gray-600 dark:text-gray-400">
+                <p className="mt-2 text-gray-600">
                   Crie sua conta para acessar o painel
                 </p>
               </div>
@@ -118,11 +117,11 @@ export default function RegisterPage() {
                   </Button>
                 </form>
               </FormProvider>
-              <div className="text-center text-sm text-gray-600 dark:text-gray-400 mt-4">
+              <div className="text-center text-sm text-gray-600 mt-4">
                 Já possui conta?{" "}
                 <span
                   onClick={() => handleNavigation("/login")}
-                  className="font-medium text-emerald-500 dark:text-gray-100 underline underline-offset-4 hover:text-emerald-700 dark:hover:text-gray-300 cursor-pointer transition-all duration-300"
+                  className="font-medium text-emerald-500 underline underline-offset-4 hover:text-emerald-700 cursor-pointer transition-all duration-300"
                 >
                   Faça login
                 </span>

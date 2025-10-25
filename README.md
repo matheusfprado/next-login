@@ -32,7 +32,7 @@ Crypto News RSS
 ⚡ Funcionalidades
 
 ✅ Login e cadastro com email e senha
-✅ Autenticação com Google via NextAuth
+✅ Autenticação via SMS (OTP) usando Twilio
 ✅ Painel do usuário protegido por autenticação
 ✅ Acompanhamento das principais criptomoedas
 ✅ Feed com as últimas notícias do mercado cripto
@@ -71,8 +71,15 @@ Crie um arquivo .env.local na raiz do projeto e adicione:
 DATABASE_URL="sua_string_de_conexao_prisma"
 NEXTAUTH_SECRET="uma_chave_segura"
 NEXTAUTH_URL="http://localhost:3000"
-GOOGLE_CLIENT_ID="sua_google_client_id"
-GOOGLE_CLIENT_SECRET="sua_google_client_secret"
+TWILIO_ACCOUNT_SID="seu_account_sid"
+TWILIO_AUTH_TOKEN="seu_auth_token"
+TWILIO_VERIFY_SID="seu_verify_sid"
+TWILIO_MESSAGING_SERVICE_SID="seu_messaging_service"
+EMAIL_HOST="smtp.seuprovedor.com"
+EMAIL_PORT="465"
+EMAIL_USER="seu_usuario"
+EMAIL_PASS="sua_senha"
+EMAIL_FROM="InvestHub <no-reply@seuprojeto.com>"
 
 4. Rode as migrações do Prisma
 npx prisma migrate dev

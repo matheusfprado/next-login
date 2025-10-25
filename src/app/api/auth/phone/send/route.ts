@@ -1,10 +1,6 @@
 import { NextResponse } from "next/server";
-import twilio from "twilio";
-
-const client = twilio(
-  process.env.TWILIO_ACCOUNT_SID!,
-  process.env.TWILIO_AUTH_TOKEN!
-);
+import { normalizePhone } from "@/lib/phone";
+import { twilioClient } from "@/lib/twilio";
 
 export async function POST(req: Request) {
   try {
@@ -15,9 +11,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Telefone obrigatório" }, { status: 400 });
     }
 
-    const verification = await client.verify.v2
+    const normalizedPhone = normalizePhone(phone);
+    if (!normalizedPhone) {
+      return NextResponse.json({ error: "Telefone inválido" }, { status: 400 });
+    }
+
+    const verification = await twilioClient.verify.v2
       .services(process.env.TWILIO_VERIFY_SID!)
-      .verifications.create({ to: phone, channel: "sms" });
+      .verifications.create({ to: normalizedPhone, channel: "sms" });
 
     console.log("Resposta Twilio:", verification);
 

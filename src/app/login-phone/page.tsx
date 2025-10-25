@@ -67,13 +67,13 @@ export default function PhoneLoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-100 dark:bg-gray-900 px-4">
-      <div className="mx-auto w-full max-w-md rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800 shadow-lg p-8 space-y-6">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-100 px-4">
+      <div className="mx-auto w-full max-w-md rounded-2xl border border-gray-200 bg-white shadow-lg p-8 space-y-6">
         <div className="text-center">
           <h1 className="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-emerald-500 to-green-400 bg-clip-text text-transparent mb-10">
             InvestHub
           </h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-400">
+          <p className="mt-2 text-gray-600">
             {step === "phone"
               ? "Entre com seu telefone para receber o código"
               : "Digite o código de 6 dígitos enviado por SMS"}
@@ -85,7 +85,7 @@ export default function PhoneLoginPage() {
             <div className="space-y-2">
               <label
                 htmlFor="phone"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                className="block text-sm font-medium text-gray-700"
               >
                 Telefone
               </label>
@@ -96,7 +96,7 @@ export default function PhoneLoginPage() {
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 required
-                className="block w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-3 py-2 text-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-gray-500 text-gray-900 dark:text-white"
+                className="block w-full rounded-xl border border-gray-300 bg-gray-50 px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400 text-gray-900"
               />
             </div>
             <button
@@ -112,7 +112,7 @@ export default function PhoneLoginPage() {
         ) : (
           <div className="space-y-4">
             <div className="space-y-2 text-center">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label className="block text-sm font-medium text-gray-700">
                 Código
               </label>
               <div className="flex justify-center gap-2">
@@ -128,7 +128,7 @@ export default function PhoneLoginPage() {
                     value={digit}
                     onChange={(e) => handleChange(e.target.value, idx)}
                     onKeyDown={(e) => handleKeyDown(e, idx)}
-                    className="w-10 h-12 text-center rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white text-lg focus:outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-gray-500"
+                    className="w-10 h-12 text-center rounded-xl border border-gray-300 bg-gray-50 text-gray-900 text-lg focus:outline-none focus:ring-2 focus:ring-gray-400"
                   />
                 ))}
               </div>
@@ -148,14 +148,14 @@ export default function PhoneLoginPage() {
         )}
 
         {message && (
-          <p className="text-sm text-center text-gray-600 dark:text-gray-400">
+          <p className="text-sm text-center text-gray-600">
             {message}
           </p>
         )}
 
         <button
           onClick={() => router.push("/login")}
-          className="w-full rounded-xl bg-gray-200 dark:bg-gray-700 px-4 py-2 text-gray-900 dark:text-gray-100 font-medium shadow-sm transition hover:bg-gray-300 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400"
+          className="w-full rounded-xl bg-gray-200 px-4 py-2 text-gray-900 font-medium shadow-sm transition hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400"
         >
           Voltar para login tradicional
         </button>

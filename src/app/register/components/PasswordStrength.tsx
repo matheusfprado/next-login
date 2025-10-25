@@ -1,15 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { CheckCircleIcon, XCircleIcon } from "lucide-react"; // ícones bonitos
+import { CheckCircleIcon, XCircleIcon } from "lucide-react";
 
 interface PasswordStrengthProps {
   password: string;
 }
 
 export function PasswordStrength({ password }: PasswordStrengthProps) {
-  const [strength, setStrength] = useState(0);
-
   const criteria = [
     { regex: /[A-Z]/, label: "Uma letra maiúscula" },
     { regex: /[a-z]/, label: "Uma letra minúscula" },
@@ -18,11 +15,8 @@ export function PasswordStrength({ password }: PasswordStrengthProps) {
     { regex: /.{6,}/, label: "Mínimo 6 caracteres" },
   ];
 
-  const fulfilled = criteria.filter(c => c.regex.test(password));
-
-  useEffect(() => {
-    setStrength((fulfilled.length / criteria.length) * 100);
-  }, [password]);
+  const fulfilled = criteria.filter((c) => c.regex.test(password));
+  const strength = (fulfilled.length / criteria.length) * 100;
 
   const getGradient = () => {
     if (strength < 40) return "bg-gradient-to-r from-red-400 to-red-600";
@@ -32,17 +26,15 @@ export function PasswordStrength({ password }: PasswordStrengthProps) {
 
   return (
     <div className="mt-3">
-      {/* Barra de progresso */}
-      <div className="w-full h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+      <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
         <div
           className={`h-3 transition-all duration-500 ${getGradient()}`}
           style={{ width: `${strength}%` }}
         />
       </div>
 
-      {/* Lista de critérios com ícones */}
       <ul className="mt-2 grid grid-cols-1 gap-1 text-sm">
-        {criteria.map(c => {
+        {criteria.map((c) => {
           const valid = c.regex.test(password);
           return (
             <li

@@ -3,6 +3,8 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { NewspaperIcon } from "@heroicons/react/24/outline";
+import Loading from "../../components/Loading";
 interface NewsItem {
   title: string;
   source: string;
@@ -46,24 +48,20 @@ export default function CryptoNews() {
   }, []);
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <span className="text-gray-500 dark:text-gray-400">Carregando notícias...</span>
-      </div>
-    );
+    return <Loading fullScreen={false} label="Carregando notícias..." />;
   }
 
   if (news.length === 0) {
     return (
       <div className="flex justify-center items-center h-64">
-        <span className="text-gray-500 dark:text-gray-400">Nenhuma notícia encontrada</span>
+        <span className="text-gray-500">Nenhuma notícia encontrada</span>
       </div>
     );
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 shadow rounded-2xl p-6">
-      <h3 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
+    <div className="bg-white shadow rounded-2xl p-6">
+      <h3 className="text-2xl font-bold mb-6 text-gray-900">
         Últimas Notícias
       </h3>
 
@@ -86,16 +84,16 @@ export default function CryptoNews() {
                   className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300"
                 />
               ) : (
-                <div className="flex items-center justify-center bg-gray-200 dark:bg-gray-700 w-full h-full text-gray-500 dark:text-gray-300">
-                  📰
+                <div className="flex h-full w-full items-center justify-center bg-gray-200 text-gray-500">
+                  <NewspaperIcon className="h-10 w-10" />
                 </div>
               )}
             </div>
-            <div className="p-4 bg-white dark:bg-gray-800">
-              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2 group-hover:text-blue-500 transition-colors">
+            <div className="p-4 bg-white">
+              <h4 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2 group-hover:text-blue-500 transition-colors">
                 {item.title}
               </h4>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm text-gray-500">
                 {item.source} • {new Date(item.date).toLocaleDateString("pt-BR")}
               </p>
             </div>

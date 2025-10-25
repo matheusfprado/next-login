@@ -22,7 +22,7 @@ export function InputField({
     <div className="space-y-2">
       <label
         htmlFor={name}
-        className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+        className="block text-sm font-medium text-gray-700"
       >
         {label}
       </label>
@@ -31,7 +31,7 @@ export function InputField({
         type={type}
         placeholder={placeholder}
         {...register(name, { required: true })}
-        className="block w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-3 py-2 text-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-400 dark:focus:ring-gray-500 text-gray-900 dark:text-white"
+        className="block w-full rounded-xl border border-gray-300 bg-gray-50 px-3 py-2 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400 text-gray-900"
       />
       {errors[name] && (
         <p className="text-sm text-red-500">

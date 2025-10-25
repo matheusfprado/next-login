@@ -78,7 +78,7 @@ export default function LoginPage() {
       {loading ? (
         <Loading />
       ) : (
-        <div className="flex min-h-screen items-center justify-center bg-gray-100 dark:bg-gray-900 px-4">
+        <div className="flex min-h-screen items-center justify-center bg-gray-100 px-4">
           <AnimatePresence>
             <motion.div
               key={transition ? "card-transition" : "card"}
@@ -86,13 +86,13 @@ export default function LoginPage() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -50, scale: 0.9 }}
               transition={{ duration: 0.5 }}
-              className="relative z-10 mx-auto w-full max-w-md rounded-3xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-2xl p-10 space-y-6"
+              className="relative z-10 mx-auto w-full max-w-md rounded-3xl border border-gray-200 bg-white shadow-2xl p-10 space-y-6"
             >
               <div className="text-center">
                 <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-emerald-500 to-green-400 bg-clip-text text-transparent mb-2">
                   InvestHub
                 </h1>
-                <p className="mt-2 text-gray-600 dark:text-gray-400">
+                <p className="mt-2 text-gray-600">
                   Entre com sua conta para acessar o painel
                 </p>
               </div>
@@ -124,11 +124,11 @@ export default function LoginPage() {
               >
                 Entrar com Telefone
               </Button>
-              <div className="text-center text-sm text-gray-600 dark:text-gray-400 mt-4">
+              <div className="text-center text-sm text-gray-600 mt-4">
                 Não tem conta?{" "}
                 <span
                   onClick={() => handleNavigation("/register")}
-                  className="font-medium text-emerald-500 dark:text-gray-100 underline underline-offset-4 hover:text-emerald-700 dark:hover:text-gray-300 cursor-pointer transition-all duration-300"
+                  className="font-medium text-emerald-500 underline underline-offset-4 hover:text-emerald-700 cursor-pointer transition-all duration-300"
                 >
                   Cadastre-se
                 </span>

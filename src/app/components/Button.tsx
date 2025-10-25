@@ -27,11 +27,11 @@ export function Button({
 
   const variants: Record<string, string> = {
     primary:
-      "bg-black text-white hover:bg-gray-900 focus:ring-gray-400 dark:focus:ring-gray-500",
+      "bg-black text-white hover:bg-gray-900 focus:ring-gray-400",
     secondary:
-      "bg-emerald-500 text-white hover:bg-emerald-600 focus:ring-emerald-400 dark:bg-gray-700 dark:hover:bg-gray-600 dark:focus:ring-gray-500",
+      "bg-emerald-500 text-white hover:bg-emerald-600 focus:ring-emerald-400",
     danger: "bg-red-500 text-white hover:bg-red-600 focus:ring-red-400",
-    ghost: "bg-transparent text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 focus:ring-gray-400",
+    ghost: "bg-transparent text-gray-900 hover:bg-gray-100 focus:ring-gray-400",
   };
 
   return (

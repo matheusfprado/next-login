@@ -1,7 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -11,13 +10,25 @@ import {
   Tooltip,
   CartesianGrid,
 } from "recharts";
+import clsx from "clsx";
+import {
+  ArrowTrendingDownIcon,
+  ArrowTrendingUpIcon,
+  BanknotesIcon,
+} from "@heroicons/react/24/outline";
+import { DashboardCrypto } from "../types";
 
 interface CryptoChartProps {
-  cryptos: any[];
+  cryptos: DashboardCrypto[];
   exchangeRate: number;
+  className?: string;
 }
 
-export default function CryptoChart({ cryptos, exchangeRate }: CryptoChartProps) {
+export default function CryptoChart({
+  cryptos,
+  exchangeRate,
+  className,
+}: CryptoChartProps) {
   const [selectedCoin, setSelectedCoin] = useState("bitcoin");
 
   const coin =
@@ -29,23 +40,33 @@ export default function CryptoChart({ cryptos, exchangeRate }: CryptoChartProps)
       price: p * exchangeRate,
     })) || [];
 
+  const currencyFormatter = useMemo(
+    () => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }),
+    []
+  );
+
   const currentPrice = data.length > 0 ? data[data.length - 1].price : null;
   const percentChange =
     data.length > 0 ? ((data[data.length - 1].price - data[0].price) / data[0].price) * 100 : null;
 
   return (
-    <div className="p-6 bg-white dark:bg-gray-900 rounded-2xl shadow-md">
+    <div className={clsx("rounded-2xl border border-gray-200 bg-white p-6 shadow-sm", className)}>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            {coin?.name || "Carregando..."}
-          </h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Últimos 7 dias</p>
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+            <BanknotesIcon className="h-5 w-5" />
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">
+              {coin?.name || "Carregando..."}
+            </h3>
+            <p className="text-sm text-gray-500">Últimos 7 dias</p>
+          </div>
         </div>
         <div className="flex items-center gap-4">
           <label
             htmlFor="coin-select"
-            className="text-sm font-medium text-gray-700 dark:text-gray-300"
+            className="text-sm font-medium text-gray-700"
           >
             Selecione a moeda:
           </label>
@@ -53,7 +74,7 @@ export default function CryptoChart({ cryptos, exchangeRate }: CryptoChartProps)
             <select
               value={selectedCoin}
               onChange={(e) => setSelectedCoin(e.target.value)}
-              className="appearance-none w-full px-4 py-2 pr-10 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 transition-colors"
+              className="appearance-none w-full rounded-lg border border-gray-300 bg-white px-4 py-2 pr-10 text-sm text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
             >
               {cryptos.length > 0 ? (
                 cryptos.map((c) => (
@@ -67,7 +88,7 @@ export default function CryptoChart({ cryptos, exchangeRate }: CryptoChartProps)
             </select>
             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
               <svg
-                className="w-4 h-4 text-gray-500 dark:text-gray-300"
+                className="w-4 h-4 text-gray-500"
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
@@ -86,17 +107,25 @@ export default function CryptoChart({ cryptos, exchangeRate }: CryptoChartProps)
       </div>
       {currentPrice && (
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-2">
-          <div className="flex flex-col">
-            <span className="text-2xl font-bold text-gray-900 dark:text-white">
-              R${currentPrice.toLocaleString("pt-BR")}
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-2xl font-semibold text-gray-900">
+              {currencyFormatter.format(currentPrice)}
             </span>
             {percentChange !== null && (
               <span
-                className={`text-sm font-medium ${
-                  percentChange >= 0 ? "text-emerald-500" : "text-red-500"
-                }`}
+                className={clsx(
+                  "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold",
+                  percentChange >= 0
+                    ? "bg-emerald-100 text-emerald-700"
+                    : "bg-red-100 text-red-600"
+                )}
               >
-                {percentChange >= 0 ? "▲" : "▼"} {percentChange.toFixed(2)}%
+                {percentChange >= 0 ? (
+                  <ArrowTrendingUpIcon className="h-4 w-4" />
+                ) : (
+                  <ArrowTrendingDownIcon className="h-4 w-4" />
+                )}
+                {percentChange.toFixed(2)}%
               </span>
             )}
           </div>

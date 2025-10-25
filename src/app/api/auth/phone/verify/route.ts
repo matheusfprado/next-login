@@ -1,12 +1,9 @@
 // /app/api/auth/phone/verify/route.ts
 import { NextResponse } from "next/server";
-import twilio from "twilio";
-import { prisma } from "@/lib/prisma";
 
-const client = twilio(
-  process.env.TWILIO_ACCOUNT_SID!,
-  process.env.TWILIO_AUTH_TOKEN!
-);
+import { normalizePhone } from "@/lib/phone";
+import { prisma } from "@/lib/prisma";
+import { twilioClient } from "@/lib/twilio";
 
 export async function POST(req: Request) {
   try {
@@ -19,15 +16,16 @@ export async function POST(req: Request) {
       );
     }
 
-    // Normaliza número para E.164
-    const cleanPhone = phone.replace(/\D/g, "");
-    const e164Phone = cleanPhone.startsWith("55") ? `+${cleanPhone}` : `+55${cleanPhone}`;
+    const normalizedPhone = normalizePhone(phone);
+    if (!normalizedPhone) {
+      return NextResponse.json({ error: "Telefone inválido" }, { status: 400 });
+    }
 
-    console.log("Verificando código:", code, "para:", e164Phone);
+    console.log("Verificando código:", code, "para:", normalizedPhone);
 
-    const verificationCheck = await client.verify.v2
+    const verificationCheck = await twilioClient.verify.v2
       .services(process.env.TWILIO_VERIFY_SID!)
-      .verificationChecks.create({ to: e164Phone, code });
+      .verificationChecks.create({ to: normalizedPhone, code });
 
     console.log("Twilio resposta verify:", verificationCheck);
 
@@ -37,12 +35,12 @@ export async function POST(req: Request) {
 
     // Cria ou busca usuário no banco
     let user = await prisma.user.findFirst({
-      where: { phone: e164Phone },
+      where: { phone: normalizedPhone },
     });
 
     if (!user) {
       user = await prisma.user.create({
-        data: { phone: e164Phone },
+        data: { phone: normalizedPhone },
       });
     }
 
