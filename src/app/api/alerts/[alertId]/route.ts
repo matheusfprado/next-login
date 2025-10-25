@@ -9,11 +9,10 @@ const updateSchema = z.object({
   status: z.enum(["ACTIVE", "TRIGGERED", "DISABLED"]).optional(),
 });
 
-interface RouteParams {
-  params: { alertId: string };
-}
-
-export async function PATCH(req: Request, { params }: RouteParams) {
+export async function PATCH(
+  req: Request,
+  { params }: { params: { alertId: string } }
+) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
@@ -46,7 +45,10 @@ export async function PATCH(req: Request, { params }: RouteParams) {
   return NextResponse.json(updated);
 }
 
-export async function DELETE(_req: Request, { params }: RouteParams) {
+export async function DELETE(
+  _req: Request,
+  { params }: { params: { alertId: string } }
+) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
