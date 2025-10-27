@@ -9,26 +9,16 @@ const updateSchema = z.object({
   status: z.enum(["ACTIVE", "TRIGGERED", "DISABLED"]).optional(),
 });
 
-export async function PATCH(
-  req: Request,
-  context: {
-    params?: Promise<Record<string, string | string[] | undefined>>;
-  }
-) {
-  const params = context.params ? await context.params : undefined;
-  const alertId = Array.isArray(params?.alertId)
-    ? params?.alertId[0]
-    : params?.alertId;
+type RouteContext = {
+  params: { alertId: string };
+};
+
+export async function PATCH(req: Request, { params }: RouteContext) {
+  const { alertId } = params;
+
   const session = await getServerSession(authOptions);
   if (!session?.user) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-  }
-
-  if (!alertId) {
-    return NextResponse.json(
-      { error: "ID do alerta não fornecido" },
-      { status: 400 }
-    );
   }
 
   const body = await req.json();
@@ -58,26 +48,12 @@ export async function PATCH(
   return NextResponse.json(updated);
 }
 
-export async function DELETE(
-  _req: Request,
-  context: {
-    params?: Promise<Record<string, string | string[] | undefined>>;
-  }
-) {
-  const params = context.params ? await context.params : undefined;
-  const alertId = Array.isArray(params?.alertId)
-    ? params?.alertId[0]
-    : params?.alertId;
+export async function DELETE(_req: Request, { params }: RouteContext) {
+  const { alertId } = params;
+
   const session = await getServerSession(authOptions);
   if (!session?.user) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-  }
-
-  if (!alertId) {
-    return NextResponse.json(
-      { error: "ID do alerta não fornecido" },
-      { status: 400 }
-    );
   }
 
   const result = await prisma.priceAlert.deleteMany({
