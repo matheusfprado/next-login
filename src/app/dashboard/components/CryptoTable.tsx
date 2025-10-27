@@ -37,6 +37,9 @@ export default function CryptoTable({ cryptos, exchangeRate, loading }: CryptoTa
             cryptos.map((coin, index) => {
               const isTop3 = index < 3;
               const priceBRL = coin.current_price * exchangeRate;
+              const change = coin.price_change_percentage_24h;
+              const hasChange = typeof change === "number";
+              const isPositiveChange = hasChange && change >= 0;
 
               return (
                 <tr
@@ -70,17 +73,21 @@ export default function CryptoTable({ cryptos, exchangeRate, loading }: CryptoTa
                   <td className="p-2 text-right">
                     <div
                       className={
-                        coin.price_change_percentage_24h >= 0
-                          ? "inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 font-medium text-emerald-700"
-                          : "inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 font-medium text-red-700"
+                        hasChange
+                          ? isPositiveChange
+                            ? "inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 font-medium text-emerald-700"
+                            : "inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 font-medium text-red-700"
+                          : "inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 font-medium text-gray-600"
                       }
                     >
-                      {coin.price_change_percentage_24h >= 0 ? (
-                        <ArrowTrendingUpIcon className="h-3.5 w-3.5" />
-                      ) : (
-                        <ArrowTrendingDownIcon className="h-3.5 w-3.5" />
-                      )}
-                      {coin.price_change_percentage_24h.toFixed(2)}%
+                      {hasChange ? (
+                        isPositiveChange ? (
+                          <ArrowTrendingUpIcon className="h-3.5 w-3.5" />
+                        ) : (
+                          <ArrowTrendingDownIcon className="h-3.5 w-3.5" />
+                        )
+                      ) : null}
+                      {hasChange ? `${change.toFixed(2)}%` : "--"}
                     </div>
                   </td>
                 </tr>

@@ -26,15 +26,12 @@ interface Alert {
   triggeredAt?: string | null;
 }
 
-interface SimplifiedCrypto {
-  id: string;
-  name: string;
-  symbol: string;
-  [key: string]: unknown;
-}
-
 interface AlertManagerProps {
-  cryptos: SimplifiedCrypto[];
+  cryptos: {
+    id: string;
+    name: string;
+    symbol: string;
+  }[];
   initialAlerts?: Alert[];
   onAlertsChange?: (alerts: Alert[]) => void;
 }

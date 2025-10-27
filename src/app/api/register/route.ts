@@ -6,10 +6,12 @@ import { prisma } from "@/lib/prisma";
 
 const registerSchema = z.object({
   email: z
-    .string({ required_error: "Email é obrigatório" })
+    .string()
+    .nonempty("Email é obrigatório")
     .email("Email inválido"),
   password: z
-    .string({ required_error: "Senha é obrigatória" })
+    .string()
+    .nonempty("Senha é obrigatória")
     .min(6, "Senha deve ter pelo menos 6 caracteres")
     .max(100, "Senha deve ter no máximo 100 caracteres"),
 });

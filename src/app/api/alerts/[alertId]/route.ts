@@ -9,12 +9,17 @@ const updateSchema = z.object({
   status: z.enum(["ACTIVE", "TRIGGERED", "DISABLED"]).optional(),
 });
 
-type RouteContext = {
-  params: { alertId: string };
-};
-
-export async function PATCH(req: Request, { params }: RouteContext) {
-  const { alertId } = params;
+export async function PATCH(
+  req: Request,
+  { params }: { params: Promise<{ alertId: string | string[] | undefined }> }
+) {
+  const { alertId } = await params;
+  if (!alertId || Array.isArray(alertId)) {
+    return NextResponse.json(
+      { error: "ID do alerta inválido" },
+      { status: 400 }
+    );
+  }
 
   const session = await getServerSession(authOptions);
   if (!session?.user) {
@@ -48,8 +53,17 @@ export async function PATCH(req: Request, { params }: RouteContext) {
   return NextResponse.json(updated);
 }
 
-export async function DELETE(_req: Request, { params }: RouteContext) {
-  const { alertId } = params;
+export async function DELETE(
+  _req: Request,
+  { params }: { params: Promise<{ alertId: string | string[] | undefined }> }
+) {
+  const { alertId } = await params;
+  if (!alertId || Array.isArray(alertId)) {
+    return NextResponse.json(
+      { error: "ID do alerta inválido" },
+      { status: 400 }
+    );
+  }
 
   const session = await getServerSession(authOptions);
   if (!session?.user) {
