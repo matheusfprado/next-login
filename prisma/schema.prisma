@@ -86,6 +86,21 @@ model UserPreference {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+model CryptoPriceHistory {
+  id        String   @id @default(cuid())
+  coinId    String
+  coinName  String
+  symbol    String
+  priceUsd  Float
+  marketCap Float?
+  volume24h Float?
+  change24h Float?
+  createdAt DateTime @default(now())
+
+  @@index([coinId, createdAt])
+  @@index([createdAt])
+}
+
 enum AlertDirection {
   ABOVE
   BELOW
