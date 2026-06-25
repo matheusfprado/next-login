@@ -25,7 +25,7 @@ interface CryptoChartProps {
 }
 
 function formatChartCurrency(
-  value?: number | string | Array<number | string>
+  value?: number | string | ReadonlyArray<number | string>
 ): string {
   if (Array.isArray(value)) {
     return value.map(formatChartCurrency).join(" - ");
