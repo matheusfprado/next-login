@@ -24,6 +24,16 @@ interface CryptoChartProps {
   className?: string;
 }
 
+function formatChartCurrency(value: number | string) {
+  const numericValue = Number(value);
+
+  if (!Number.isFinite(numericValue)) {
+    return "R$ 0";
+  }
+
+  return `R$ ${numericValue.toLocaleString("pt-BR")}`;
+}
+
 export default function CryptoChart({
   cryptos,
   exchangeRate,
@@ -151,12 +161,12 @@ export default function CryptoChart({
             tickLine={false}
             tick={{ fill: "#9ca3af", fontSize: 12 }}
             domain={["auto", "auto"]}
-            tickFormatter={(value) => `R$ ${value.toLocaleString("pt-BR")}`}
+            tickFormatter={formatChartCurrency}
           />
           <Tooltip
             contentStyle={{ backgroundColor: "#1f2937", borderRadius: 8, border: "none" }}
             itemStyle={{ color: "#f9fafb" }}
-            formatter={(value: number) => `R$ ${value.toLocaleString("pt-BR")}`}
+            formatter={formatChartCurrency}
           />
           <Area
             type="monotone"
