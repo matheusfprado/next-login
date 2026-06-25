@@ -24,7 +24,13 @@ interface CryptoChartProps {
   className?: string;
 }
 
-function formatChartCurrency(value: number | string) {
+function formatChartCurrency(
+  value?: number | string | Array<number | string>
+): string {
+  if (Array.isArray(value)) {
+    return value.map(formatChartCurrency).join(" - ");
+  }
+
   const numericValue = Number(value);
 
   if (!Number.isFinite(numericValue)) {
