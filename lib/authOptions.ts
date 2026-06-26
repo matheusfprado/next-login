@@ -1,11 +1,9 @@
-import type { NextAuthOptions } from "next-auth";
-import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import bcrypt from "bcryptjs";
+import type { NextAuthOptions } from "next-auth";
+import CredentialsProvider from "next-auth/providers/credentials";
 
 import { prisma } from "@/lib/prisma";
-import { normalizePhone } from "@/lib/phone";
-import { twilioClient } from "@/lib/twilio";
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
@@ -13,7 +11,7 @@ export const authOptions: NextAuthOptions = {
     CredentialsProvider({
       name: "Credenciais",
       credentials: {
-        email: { label: "Email", type: "text" },
+        email: { label: "Email", type: "email" },
         password: { label: "Senha", type: "password" },
       },
       async authorize(credentials) {
@@ -29,10 +27,7 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        const isValid = await bcrypt.compare(
-          credentials.password,
-          user.password
-        );
+        const isValid = await bcrypt.compare(credentials.password, user.password);
 
         if (!isValid) {
           return null;
@@ -42,55 +37,6 @@ export const authOptions: NextAuthOptions = {
           id: user.id,
           name: user.name ?? null,
           email: user.email,
-        };
-      },
-    }),
-    CredentialsProvider({
-      name: "Telefone (OTP)",
-      id: "otp-phone",
-      credentials: {
-        phone: { label: "Telefone", type: "text" },
-        code: { label: "Código", type: "text" },
-      },
-      async authorize(credentials) {
-        if (!credentials?.phone || !credentials?.code) {
-          return null;
-        }
-
-        const phone = normalizePhone(credentials.phone);
-        if (!phone) {
-          return null;
-        }
-
-        try {
-          const verificationCheck = await twilioClient.verify
-            .services(process.env.TWILIO_VERIFY_SID!)
-            .verificationChecks.create({
-              to: phone,
-              code: credentials.code,
-            });
-
-          if (verificationCheck.status !== "approved") {
-            console.log("Código OTP inválido");
-            return null;
-          }
-        } catch (err) {
-          console.error("Erro ao verificar OTP:", err);
-          return null;
-        }
-
-        let user = await prisma.user.findFirst({ where: { phone } });
-        if (!user) {
-          user = await prisma.user.create({
-            data: { phone, name: null, email: null },
-          });
-        }
-
-        return {
-          id: user.id,
-          name: user.name ?? null,
-          email: user.email ?? null,
-          phone: user.phone,
         };
       },
     }),

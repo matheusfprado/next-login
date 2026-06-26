@@ -17,27 +17,12 @@ import {
   BanknotesIcon,
 } from "@heroicons/react/24/outline";
 import { DashboardCrypto } from "../types";
+import { useCurrency } from "@/src/contexts/CurrencyContext";
 
 interface CryptoChartProps {
   cryptos: DashboardCrypto[];
   exchangeRate: number;
   className?: string;
-}
-
-function formatChartCurrency(
-  value?: number | string | ReadonlyArray<number | string>
-): string {
-  if (Array.isArray(value)) {
-    return value.map(formatChartCurrency).join(" - ");
-  }
-
-  const numericValue = Number(value);
-
-  if (!Number.isFinite(numericValue)) {
-    return "R$ 0";
-  }
-
-  return `R$ ${numericValue.toLocaleString("pt-BR")}`;
 }
 
 export default function CryptoChart({
@@ -46,6 +31,7 @@ export default function CryptoChart({
   className,
 }: CryptoChartProps) {
   const [selectedCoin, setSelectedCoin] = useState("bitcoin");
+  const { currency } = useCurrency();
 
   const coin =
     cryptos.find((c) => c.id === selectedCoin) || cryptos[0] || null;
@@ -57,9 +43,24 @@ export default function CryptoChart({
     })) || [];
 
   const currencyFormatter = useMemo(
-    () => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }),
-    []
+    () =>
+      new Intl.NumberFormat(currency === "BRL" ? "pt-BR" : "en-US", {
+        style: "currency",
+        currency,
+      }),
+    [currency]
   );
+
+  const formatChartCurrency = (
+    value?: number | string | ReadonlyArray<number | string>
+  ): string => {
+    if (Array.isArray(value)) {
+      return value.map(formatChartCurrency).join(" - ");
+    }
+
+    const numericValue = Number(value);
+    return currencyFormatter.format(Number.isFinite(numericValue) ? numericValue : 0);
+  };
 
   const currentPrice = data.length > 0 ? data[data.length - 1].price : null;
   const percentChange =

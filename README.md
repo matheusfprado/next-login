@@ -59,10 +59,6 @@ cd seu-repositorio
 
 2. Instale as dependências
 npm install
-# ou
-yarn
-# ou
-pnpm install
 
 3. Configure variáveis de ambiente
 
@@ -86,7 +82,3 @@ npx prisma migrate dev
 
 5. Inicie o servidor de desenvolvimento
 npm run dev
-# ou
-yarn dev
-# ou
-pnpm dev

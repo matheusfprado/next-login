@@ -9,7 +9,7 @@ import {
   TrashIcon,
 } from "@heroicons/react/24/outline";
 import { Button } from "../../components/Button";
-import Loading from "../../components/Loading";
+import { useCurrency } from "@/src/contexts/CurrencyContext";
 
 type AlertDirection = "ABOVE" | "BELOW";
 type AlertDelivery = "EMAIL" | "SMS";
@@ -44,7 +44,8 @@ export function AlertManager({
   const [alerts, setAlerts] = useState<Alert[]>(initialAlerts ?? []);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [initializing, setInitializing] = useState(!initialAlerts);
+  const [, setInitializing] = useState(!initialAlerts);
+  const { formatCurrency } = useCurrency();
 
   const coinOptions = useMemo(
     () =>
@@ -170,10 +171,6 @@ export function AlertManager({
     setLoading(false);
   };
 
-  if (initializing) {
-    return <Loading fullScreen={false} label="Carregando alertas..." />;
-  }
-
   return (
     <div className="space-y-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -251,8 +248,8 @@ export function AlertManager({
               }))
             }
           >
-            <option value="ABOVE">Preço ≥ alvo</option>
-            <option value="BELOW">Preço ≤ alvo</option>
+            <option value="ABOVE">Preço &gt;= alvo</option>
+            <option value="BELOW">Preço &lt;= alvo</option>
           </select>
         </label>
 
@@ -302,7 +299,7 @@ export function AlertManager({
                   </h4>
                   <p className="text-sm text-gray-500">
                     {alert.direction === "ABOVE" ? "Acima de" : "Abaixo de"}{" "}
-                    ${alert.targetPrice.toLocaleString("en-US")} •{" "}
+                    {formatCurrency(alert.targetPrice)} •{" "}
                     {alert.deliveryMethod === "EMAIL" ? "E-mail" : "SMS"}
                   </p>
                 </div>
@@ -338,3 +335,6 @@ export function AlertManager({
     </div>
   );
 }
+
+
+

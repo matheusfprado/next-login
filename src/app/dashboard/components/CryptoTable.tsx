@@ -7,15 +7,24 @@ import {
   ArrowTrendingDownIcon,
 } from "@heroicons/react/24/outline";
 import { DashboardCrypto } from "../types";
-import Loading from "../../components/Loading";
+import { useCurrency } from "@/src/contexts/CurrencyContext";
 
 interface CryptoTableProps {
   cryptos: DashboardCrypto[];
   exchangeRate: number;
-  loading: boolean;
+  loading?: boolean;
 }
 
-export default function CryptoTable({ cryptos, exchangeRate, loading }: CryptoTableProps) {
+export default function CryptoTable({ cryptos, exchangeRate }: CryptoTableProps) {
+  const { currency } = useCurrency();
+  const currencyFormatter = new Intl.NumberFormat(
+    currency === "BRL" ? "pt-BR" : "en-US",
+    {
+      style: "currency",
+      currency,
+    }
+  );
+
   return (
     <div className="max-h-[380px] overflow-x-auto">
       <table className="min-w-full rounded-xl border border-gray-200 bg-white text-[12px] shadow-sm">
@@ -27,16 +36,10 @@ export default function CryptoTable({ cryptos, exchangeRate, loading }: CryptoTa
           </tr>
         </thead>
         <tbody>
-          {loading ? (
-            <tr>
-              <td colSpan={3} className="p-4">
-                <Loading fullScreen={false} label="Carregando ativos..." />
-              </td>
-            </tr>
-          ) : cryptos.length > 0 ? (
+          {cryptos.length > 0 ? (
             cryptos.map((coin, index) => {
               const isTop3 = index < 3;
-              const priceBRL = coin.current_price * exchangeRate;
+              const displayPrice = coin.current_price * exchangeRate;
               const change = coin.price_change_percentage_24h;
               const hasChange = typeof change === "number";
               const isPositiveChange = hasChange && change >= 0;
@@ -68,7 +71,7 @@ export default function CryptoTable({ cryptos, exchangeRate, loading }: CryptoTa
                     </div>
                   </td>
                   <td className="p-2 text-right font-semibold text-gray-900">
-                    R${priceBRL.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                    {currencyFormatter.format(displayPrice)}
                   </td>
                   <td className="p-2 text-right">
                     <div
@@ -105,3 +108,4 @@ export default function CryptoTable({ cryptos, exchangeRate, loading }: CryptoTa
     </div>
   );
 }
+

@@ -8,7 +8,7 @@ import {
   TrashIcon,
 } from "@heroicons/react/24/outline";
 import { Button } from "../../components/Button";
-import Loading from "../../components/Loading";
+import { useCurrency } from "@/src/contexts/CurrencyContext";
 
 interface Goal {
   id: string;
@@ -32,7 +32,8 @@ export function GoalsManager({
   const [goals, setGoals] = useState<Goal[]>(initialGoals ?? []);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [initializing, setInitializing] = useState(!initialGoals);
+  const [, setInitializing] = useState(!initialGoals);
+  const { formatCurrency } = useCurrency();
 
   const [form, setForm] = useState({
     title: "",
@@ -139,10 +140,6 @@ export function GoalsManager({
       syncGoals((prev) => prev.filter((goal) => goal.id !== goalId));
     }
   };
-
-  if (initializing) {
-    return <Loading fullScreen={false} label="Carregando metas..." />;
-  }
 
   return (
     <div className="space-y-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -267,8 +264,8 @@ export function GoalsManager({
                       </p>
                     )}
                     <p className="text-sm text-gray-500">
-                      Alvo: ${goal.targetAmount.toLocaleString("en-US")} • Atual: $
-                      {goal.currentAmount.toLocaleString("en-US")}
+                      Alvo: {formatCurrency(goal.targetAmount)} - Atual:{" "}
+                      {formatCurrency(goal.currentAmount)}
                       {goal.deadline
                         ? ` • Prazo: ${new Date(goal.deadline).toLocaleDateString("pt-BR")}`
                         : ""}
@@ -321,3 +318,6 @@ export function GoalsManager({
     </div>
   );
 }
+
+
+

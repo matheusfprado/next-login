@@ -3,7 +3,6 @@
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import Header from "../components/Header";
-import Loading from "../../components/Loading";
 import {
   BellAlertIcon,
   EnvelopeIcon,
@@ -34,7 +33,7 @@ interface SelectSetting {
 export default function ConfiguracoesPage() {
   const { data: session, status } = useSession();
   const [saving, setSaving] = useState(false);
-  const [loadingSettings, setLoadingSettings] = useState(true);
+  const [, setLoadingSettings] = useState(true);
   const [toggles, setToggles] = useState<Record<string, boolean>>({
     emailAlerts: true,
     smsAlerts: false,
@@ -161,31 +160,12 @@ export default function ConfiguracoesPage() {
     }
   };
 
-  if (status === "loading") {
-    return (
-      <div className="px-6 py-8">
-        <Loading fullScreen={false} label="Carregando configurações..." />
-      </div>
-    );
-  }
-
-  if (!session) {
-    return (
-      <div className="px-6 py-8">
-        <Loading fullScreen={false} label="Redirecionando..." />
-      </div>
-    );
-  }
+  if (status === "unauthenticated") return null;
 
   return (
     <>
-      <Header userEmail={session.user?.email ?? ""} cryptos={[]} />
-      {loadingSettings ? (
-        <div className="px-6 py-8">
-          <Loading fullScreen={false} label="Preparando suas preferências..." />
-        </div>
-      ) : (
-        <div className="flex w-full flex-col gap-8 px-6 py-8 lg:px-10">
+      <Header userEmail={session?.user?.email ?? ""} cryptos={[]} />
+      <div className="flex w-full flex-col gap-8 px-6 py-8 lg:px-10">
         <section className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
@@ -285,7 +265,9 @@ export default function ConfiguracoesPage() {
           </div>
         </section>
         </div>
-      )}
     </>
   );
 }
+
+
+

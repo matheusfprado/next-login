@@ -3,7 +3,6 @@
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import Header from "../components/Header";
-import Loading from "../../components/Loading";
 import {
   IdentificationIcon,
   EnvelopeIcon,
@@ -29,7 +28,7 @@ export default function PerfilPage() {
     email: session?.user?.email ?? "",
     phone: (session?.user as { phone?: string })?.phone ?? "",
   });
-  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [, setLoadingProfile] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -122,30 +121,11 @@ export default function PerfilPage() {
     }
   };
 
-  if (status === "loading") {
-    return (
-      <div className="px-6 py-8">
-        <Loading fullScreen={false} label="Carregando perfil..." />
-      </div>
-    );
-  }
-
-  if (!session) {
-    return (
-      <div className="px-6 py-8">
-        <Loading fullScreen={false} label="Redirecionando..." />
-      </div>
-    );
-  }
+  if (status === "unauthenticated") return null;
 
   return (
     <>
-      <Header userEmail={session.user?.email ?? ""} cryptos={[]} />
-      {loadingProfile ? (
-        <div className="px-6 py-8">
-          <Loading fullScreen={false} label="Preparando suas informações..." />
-        </div>
-      ) : (
+      <Header userEmail={session?.user?.email ?? ""} cryptos={[]} />
         <div className="flex w-full flex-col gap-8 px-6 py-8 lg:px-10">
         <section className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -253,7 +233,6 @@ export default function PerfilPage() {
           </div>
         </section>
       </div>
-      )}
     </>
   );
 }

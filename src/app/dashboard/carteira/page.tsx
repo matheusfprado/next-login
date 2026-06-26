@@ -3,7 +3,6 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import Loading from "../../components/Loading";
 import { Button } from "../../components/Button";
 import Header from "../components/Header";
 import {
@@ -12,6 +11,7 @@ import {
   SparklesIcon,
 } from "@heroicons/react/24/outline";
 import clsx from "clsx";
+import { useCurrency } from "@/src/contexts/CurrencyContext";
 
 interface PortfolioItem {
   id: string;
@@ -43,13 +43,6 @@ interface EnrichedPortfolio extends PortfolioItem {
   symbol?: string;
 }
 
-const formatCurrency = (value: number) =>
-  new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: value >= 100 ? 0 : 2,
-  }).format(Number.isFinite(value) ? value : 0);
-
 const formatNumber = (value: number, fractionDigits = 4) =>
   new Intl.NumberFormat("pt-BR", {
     maximumFractionDigits: fractionDigits,
@@ -58,6 +51,7 @@ const formatNumber = (value: number, fractionDigits = 4) =>
 export default function CarteiraPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { formatCurrency } = useCurrency();
 
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
   const [cryptos, setCryptos] = useState<CryptoMarket[]>([]);
@@ -294,36 +288,13 @@ export default function CarteiraPage() {
     }
   };
 
-  if (status === "loading") {
-    return (
-      <div className="px-6 py-8">
-        <Loading fullScreen={false} label="Carregando carteira..." />
-      </div>
-    );
-  }
-
-  if (!session) {
+  if (status === "unauthenticated") {
     return null;
-  }
-
-  const initialLoading = isFetching && portfolio.length === 0;
-
-  if (initialLoading) {
-    return (
-      <div className="px-6 py-8">
-        <Loading fullScreen={false} label="Preparando sua carteira..." />
-      </div>
-    );
   }
 
   return (
     <>
-      <Header userEmail={session.user?.email || ""} cryptos={cryptos} />
-      {isFetching && !initialLoading && (
-        <div className="px-6">
-          <Loading fullScreen={false} label="Sincronizando ativos..." />
-        </div>
-      )}
+      <Header userEmail={session?.user?.email || ""} cryptos={cryptos} />
 
     <div className="flex w-full flex-col gap-10 px-6 py-8 lg:px-10">
 

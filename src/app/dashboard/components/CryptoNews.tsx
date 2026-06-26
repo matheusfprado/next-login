@@ -4,7 +4,6 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { NewspaperIcon } from "@heroicons/react/24/outline";
-import Loading from "../../components/Loading";
 interface NewsItem {
   title: string;
   source: string;
@@ -15,7 +14,7 @@ interface NewsItem {
 
 export default function CryptoNews() {
   const [news, setNews] = useState<NewsItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchNews = async () => {
@@ -46,10 +45,6 @@ export default function CryptoNews() {
 
     fetchNews();
   }, []);
-
-  if (loading) {
-    return <Loading fullScreen={false} label="Carregando notícias..." />;
-  }
 
   if (news.length === 0) {
     return (
@@ -103,3 +98,4 @@ export default function CryptoNews() {
     </div>
   );
 }
+

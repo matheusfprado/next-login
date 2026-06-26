@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Header from "./components/Header";
-import Loading from "../components/Loading";
 import CryptoChart from "./components/CryptoChart";
 import CryptoTable from "./components/CryptoTable";
 import CryptoNews from "./components/CryptoNews";
@@ -19,6 +18,7 @@ import {
   ClipboardDocumentCheckIcon,
 } from "@heroicons/react/24/outline";
 import { DashboardCrypto } from "./types";
+import { useCurrency } from "@/src/contexts/CurrencyContext";
 
 type AlertStatus = "ACTIVE" | "TRIGGERED" | "DISABLED";
 
@@ -55,11 +55,11 @@ interface GoalSummary {
 export default function DashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { currency, exchangeRate, setExchangeRate, formatCurrency } = useCurrency();
 
   const [cryptos, setCryptos] = useState<DashboardCrypto[]>([]);
-  const [exchangeRate, setExchangeRate] = useState(5.0);
-  const [loading, setLoading] = useState(true);
-  const [initialLoad, setInitialLoad] = useState(true);
+  const [, setLoading] = useState(true);
+  const [, setInitialLoad] = useState(true);
   const [portfolio, setPortfolio] = useState<PortfolioEntry[]>([]);
   const [alerts, setAlerts] = useState<AlertSummary[]>([]);
   const [goals, setGoals] = useState<GoalSummary[]>([]);
@@ -77,28 +77,12 @@ export default function DashboardPage() {
 
     const loadMarketData = async (prime = false) => {
       if (prime && typeof window !== "undefined") {
-        const cachedRate = window.localStorage.getItem("exchangeRate");
-        if (cachedRate) setExchangeRate(Number(cachedRate));
         const cachedCryptos = window.localStorage.getItem("cryptos");
         if (cachedCryptos) setCryptos(JSON.parse(cachedCryptos) as DashboardCrypto[]);
       }
 
       try {
-        const [rateRes, cryptosRes] = await Promise.all([
-          fetch("https://api.exchangerate.host/latest?base=USD&symbols=BRL"),
-          fetch("/api/cryptos"),
-        ]);
-
-        if (rateRes.ok) {
-          const jsonRate = await rateRes.json();
-          if (jsonRate?.rates?.BRL && isMounted) {
-            setExchangeRate(jsonRate.rates.BRL);
-            if (typeof window !== "undefined") {
-              window.localStorage.setItem("exchangeRate", jsonRate.rates.BRL);
-            }
-          }
-        }
-
+        const cryptosRes = await fetchWithTimeout("/api/cryptos", 8_000);
         if (cryptosRes.ok) {
           const data = await cryptosRes.json();
           if (Array.isArray(data) && isMounted) {
@@ -115,7 +99,26 @@ export default function DashboardPage() {
           );
         }
       } catch (error) {
-        console.error("Erro ao carregar dados do mercado:", error);
+        console.error("Erro ao carregar criptomoedas:", error);
+      }
+
+      try {
+        const rateRes = await fetchWithTimeout(
+          "https://api.exchangerate.host/latest?base=USD&symbols=BRL",
+          4_000
+        );
+
+        if (rateRes.ok) {
+          const jsonRate = await rateRes.json();
+          if (jsonRate?.rates?.BRL && isMounted) {
+            setExchangeRate(jsonRate.rates.BRL);
+            if (typeof window !== "undefined") {
+              window.localStorage.setItem("exchangeRate", jsonRate.rates.BRL);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Erro ao carregar cotação BRL:", error);
       }
     };
 
@@ -182,16 +185,7 @@ export default function DashboardPage() {
       isMounted = false;
       clearInterval(interval);
     };
-  }, [status, router]);
-
-  const currencyBRL = useMemo(
-    () => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }),
-    []
-  );
-  const currencyUSD = useMemo(
-    () => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }),
-    []
-  );
+  }, [status, router, setExchangeRate]);
 
   const cryptoMap = useMemo(() => {
     const map = new Map<string, DashboardCrypto>();
@@ -262,8 +256,14 @@ export default function DashboardPage() {
       {
         title: "Patrimônio atual",
         icon: BanknotesIcon,
-        value: currencyBRL.format(portfolioSummary.current * exchangeRate),
-        helper: `≈ ${currencyUSD.format(portfolioSummary.current)} USD`,
+        value: formatCurrency(portfolioSummary.current),
+        helper:
+          currency === "BRL"
+            ? `aprox. ${new Intl.NumberFormat("en-US", {
+                style: "currency",
+                currency: "USD",
+              }).format(portfolioSummary.current)} USD`
+            : undefined,
         trend: portfolioSummary.profitPct,
         trendPositive: portfolioSummary.profit >= 0,
         trendLabel: "vs. investido",
@@ -271,8 +271,14 @@ export default function DashboardPage() {
       {
         title: "Total investido",
         icon: CircleStackIcon,
-        value: currencyBRL.format(portfolioSummary.invested * exchangeRate),
-        helper: `≈ ${currencyUSD.format(portfolioSummary.invested)} USD`,
+        value: formatCurrency(portfolioSummary.invested),
+        helper:
+          currency === "BRL"
+            ? `aprox. ${new Intl.NumberFormat("en-US", {
+                style: "currency",
+                currency: "USD",
+              }).format(portfolioSummary.invested)} USD`
+            : undefined,
       },
       {
         title: "Alertas ativos",
@@ -299,39 +305,18 @@ export default function DashboardPage() {
     ],
     [
       alertsSummary,
-      currencyBRL,
-      currencyUSD,
-      exchangeRate,
+      currency,
+      formatCurrency,
       goals.length,
       goalsProgress,
       portfolioSummary,
     ]
   );
-
-  if (status === "loading") {
-    return (
-      <div className="px-6 py-8">
-        <Loading fullScreen={false} label="Carregando painel..." />
-      </div>
-    );
-  }
-  if (!session) return null;
-  if (initialLoad && loading) {
-    return (
-      <div className="px-6 py-8">
-        <Loading fullScreen={false} label="Preparando dashboard..." />
-      </div>
-    );
-  }
+  if (status === "unauthenticated") return null;
 
   return (
     <>
-      <Header userEmail={session.user?.email || ""} cryptos={cryptos} />
-      {loading && !initialLoad && (
-        <div className="px-6">
-          <Loading fullScreen={false} label="Atualizando dados..." />
-        </div>
-      )}
+      <Header userEmail={session?.user?.email || ""} cryptos={cryptos} />
       <div className="flex w-full flex-col gap-8 px-6 py-8 lg:px-8">
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {summaryCards.map((card) => (
@@ -399,7 +384,10 @@ export default function DashboardPage() {
                 </p>
               </div>
             </div>
-            <CryptoChart cryptos={cryptos} exchangeRate={exchangeRate} />
+            <CryptoChart
+              cryptos={cryptos}
+              exchangeRate={currency === "BRL" ? exchangeRate : 1}
+            />
             <div className="grid gap-4 sm:grid-cols-2">
               {bestPerformer && (
                 <div className="flex items-center justify-between rounded-xl border border-gray-200 px-4 py-3">
@@ -441,13 +429,13 @@ export default function DashboardPage() {
                 Top 10 criptomoedas
               </h3>
               <p className="text-xs text-gray-500">
-                Valores convertidos para BRL
+                Valores em {currency === "BRL" ? "BRL" : "USD"}
               </p>
             </div>
             <CryptoTable
               cryptos={cryptos}
-              exchangeRate={exchangeRate}
-              loading={loading && cryptos.length === 0}
+              exchangeRate={currency === "BRL" ? exchangeRate : 1}
+              loading={false}
             />
           </div>
         </section>
@@ -466,3 +454,17 @@ export default function DashboardPage() {
     </>
   );
 }
+
+async function fetchWithTimeout(input: RequestInfo | URL, timeoutMs: number) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(input, { signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+
+

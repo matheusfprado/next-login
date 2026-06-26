@@ -2,6 +2,7 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { BellIcon, ChartBarIcon } from "@heroicons/react/24/outline";
 import { DashboardCrypto } from "../types";
+import { useCurrency } from "@/src/contexts/CurrencyContext";
 
 interface HeaderProps {
   userEmail?: string;
@@ -12,6 +13,7 @@ export default function Header({ userEmail = "", cryptos }: HeaderProps) {
   const username = userEmail.split("@")[0] || "Usuário";
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const { currency, setCurrency } = useCurrency();
 
   const cryptoDrops = useMemo(() => {
     if (!cryptos || cryptos.length === 0) return [];
@@ -46,7 +48,19 @@ export default function Header({ userEmail = "", cryptos }: HeaderProps) {
           </span>
         </p>
       </div>
-      <div className="flex items-center gap-6 relative">
+      <div className="flex items-center gap-6 relative">        <label className="flex items-center gap-2 text-sm font-medium text-gray-600">
+          Moeda
+          <select
+            value={currency}
+            onChange={(event) =>
+              setCurrency(event.target.value === "USD" ? "USD" : "BRL")
+            }
+            className="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm font-semibold text-gray-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+          >
+            <option value="BRL">Real</option>
+            <option value="USD">Dólar</option>
+          </select>
+        </label>
         <div ref={dropdownRef} className="relative">
           <button
             className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center"
@@ -105,3 +119,8 @@ export default function Header({ userEmail = "", cryptos }: HeaderProps) {
     </header>
   );
 }
+
+
+
+
+

@@ -1,89 +1,85 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-generator client {
-  provider = "prisma-client-js"
-}
-
 model User {
-  id        String   @id @default(cuid())
-  name      String?
-  email     String?  @unique
-  password  String?
-  phone     String?  @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt 
-  portfolios Portfolio[]
-  priceAlerts PriceAlert[]
+  id              String           @id @default(cuid())
+  name            String?
+  email           String?          @unique
+  password        String?
+  phone           String?          @unique
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
   investmentGoals InvestmentGoal[]
-  preferences UserPreference?
+  portfolios      Portfolio[]
+  priceAlerts     PriceAlert[]
+  preferences     UserPreference?
 }
 
 model Portfolio {
   id        String   @id @default(cuid())
   userId    String
-  coinId    String   
-  coinName  String   
-  amount    Float   
-  buyPrice  Float    
+  coinId    String
+  coinName  String
+  amount    Float
+  buyPrice  Float
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
 
 model PriceAlert {
-  id             String          @id @default(cuid())
+  id             String         @id @default(cuid())
   userId         String
   coinId         String
   coinName       String
   targetPrice    Float
-  direction      AlertDirection  @default(ABOVE)
-  deliveryMethod AlertDelivery   @default(EMAIL)
-  status         AlertStatus     @default(ACTIVE)
+  direction      AlertDirection @default(ABOVE)
+  deliveryMethod AlertDelivery  @default(EMAIL)
+  status         AlertStatus    @default(ACTIVE)
   triggeredAt    DateTime?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([status])
 }
 
 model InvestmentGoal {
-  id            String   @id @default(cuid())
+  id            String    @id @default(cuid())
   userId        String
   title         String
   description   String?
   targetAmount  Float
-  currentAmount Float   @default(0)
+  currentAmount Float     @default(0)
   deadline      DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
 
 model UserPreference {
-  id                String   @id @default(cuid())
-  userId            String   @unique
-  emailAlerts       Boolean  @default(true)
-  smsAlerts         Boolean  @default(false)
-  weeklySummary     Boolean  @default(true)
-  language          String   @default("Português (Brasil)")
-  currency          String   @default("Real (BRL)")
-  dashboardDensity  String   @default("Confortável")
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  emailAlerts      Boolean  @default(true)
+  smsAlerts        Boolean  @default(false)
+  weeklySummary    Boolean  @default(true)
+  language         String   @default("Português (Brasil)")
+  currency         String   @default("Real (BRL)")
+  dashboardDensity String   @default("Confortável")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model CryptoPriceHistory {

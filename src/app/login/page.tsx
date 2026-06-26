@@ -1,36 +1,28 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
+import { AnimatePresence, motion } from "framer-motion";
+import { Lock } from "lucide-react";
 import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { InputField } from "@/src/app/login/components/InputField";
-import { Button } from "@/src/app/components/Button";
+
 import Loading from "../components/Loading";
-import { motion, AnimatePresence } from "framer-motion";
+import { InputField } from "@/src/app/login/components/InputField";
+import { useToast } from "@/src/components/ui/toast";
 
 const loginSchema = z.object({
   email: z
     .string()
-    .nonempty({ message: "O email é obrigatório" })
-    .email({ message: "Email inválido" }),
+    .trim()
+    .min(1, { message: "Informe seu email" })
+    .email({ message: "Informe um email valido" }),
   password: z
     .string()
-    .nonempty({ message: "A senha é obrigatória" })
-    .min(6, { message: "Senha deve ter no mínimo 6 caracteres" })
-    .max(20, { message: "Senha deve ter no máximo 20 caracteres" })
-    .regex(/[A-Z]/, {
-      message: "Senha deve conter ao menos uma letra maiúscula",
-    })
-    .regex(/[a-z]/, {
-      message: "Senha deve conter ao menos uma letra minúscula",
-    })
-    .regex(/[0-9]/, { message: "Senha deve conter ao menos um número" })
-    .regex(/[^A-Za-z0-9]/, {
-      message: "Senha deve conter ao menos um caractere especial",
-    }),
+    .min(1, { message: "Informe sua senha" })
+    .min(6, { message: "A senha precisa ter pelo menos 6 caracteres" }),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
@@ -38,68 +30,98 @@ type LoginFormData = z.infer<typeof loginSchema>;
 export default function LoginPage() {
   const { status } = useSession();
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [transition, setTransition] = useState(false);
+  const { toast } = useToast();
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   const methods = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
+    mode: "onBlur",
+    defaultValues: {
+      email: "",
+      password: "",
+    },
   });
-  const { handleSubmit } = methods;
+
+  const {
+    handleSubmit,
+    formState: { isSubmitting },
+  } = methods;
 
   const handleLogin = async (data: LoginFormData) => {
-    setLoading(true);
-    setTransition(true);
+    setIsLoggingIn(true);
 
     const result = await signIn("credentials", {
       redirect: false,
-      email: data.email,
+      email: data.email.trim(),
       password: data.password,
     });
 
     if (result?.error) {
-      alert("Falha no login: email ou senha incorretos");
-      setTransition(false);
-      setLoading(false);
-    } else if (result?.ok) {
-      router.replace("/dashboard");
+      toast({
+        title: "Não foi possível entrar",
+        description: "Confira o email e a senha e tente novamente.",
+        variant: "destructive",
+      });
+      setIsLoggingIn(false);
+      return;
     }
+
+    if (!result?.ok) {
+      toast({
+        title: "Login não concluido",
+        description: "Tente novamente em alguns instantes.",
+        variant: "destructive",
+      });
+      setIsLoggingIn(false);
+      return;
+    }
+
+    toast({
+      title: "Login realizado",
+      description: "Redirecionando para o painel.",
+    });
+    router.replace("/dashboard");
   };
 
-  const handleNavigation = (path: string) => {
-    setTransition(true);
-    setLoading(true);
-    setTimeout(() => router.push(path), 500);
+  const handleInvalidSubmit = () => {
+    toast({
+      title: "Revise os campos",
+      description: "Preencha email e senha corretamente.",
+      variant: "destructive",
+    });
   };
 
-  if (status === "loading") return <Loading />;
+  if (status === "loading" || isLoggingIn) {
+    return <Loading label={isLoggingIn ? "Entrando..." : undefined} />;
+  }
 
   return (
-    <>
-      {loading ? (
-        <Loading />
-      ) : (
-        <div className="flex min-h-screen items-center justify-center bg-gray-100 px-4">
-          <AnimatePresence>
-            <motion.div
-              key={transition ? "card-transition" : "card"}
-              initial={{ opacity: 0, y: 50, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -50, scale: 0.9 }}
-              transition={{ duration: 0.5 }}
-              className="relative z-10 mx-auto w-full max-w-md rounded-3xl border border-gray-200 bg-white shadow-2xl p-10 space-y-6"
-            >
-              <div className="text-center">
-                <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-emerald-500 to-green-400 bg-clip-text text-transparent mb-2">
-                  InvestHub
-                </h1>
-                <p className="mt-2 text-gray-600">
-                  Entre com sua conta para acessar o painel
-                </p>
-              </div>
+    <div className="flex min-h-screen items-center justify-center bg-gray-100 px-4 py-8">
+      <AnimatePresence>
+        <motion.div
+          key="login-card"
+          initial={{ opacity: 0, y: 50, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -50, scale: 0.9 }}
+          transition={{ duration: 0.5 }}
+          className="relative z-10 mx-auto w-full max-w-[448px]"
+        >
+          <div className="space-y-7 rounded-[22px] border border-gray-200 bg-white p-10 shadow-[0_24px_60px_rgba(15,23,42,0.16)]">
+            <div className="text-center">
+              <h1 className="mb-2 text-3xl font-extrabold tracking-tight text-emerald-500">
+                InvestHub
+              </h1>
+              <p className="mt-2 text-base text-gray-700">
+                Entre com sua conta para acessar o painel.
+              </p>
+            </div>
+
+            <div className="space-y-6">
               <FormProvider {...methods}>
                 <form
-                  onSubmit={handleSubmit(handleLogin)}
+                  onSubmit={handleSubmit(handleLogin, handleInvalidSubmit)}
                   className="space-y-5"
+                  noValidate
                 >
                   <InputField
                     name="email"
@@ -113,30 +135,39 @@ export default function LoginPage() {
                     type="password"
                     placeholder="••••••"
                   />
-                  <Button type="submit" variant="primary">
-                    Entrar
-                  </Button>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="flex h-10 w-full items-center justify-center rounded-xl bg-black px-4 text-sm font-bold text-white shadow-md transition hover:bg-black/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 disabled:pointer-events-none disabled:opacity-70"
+                  >
+                    {isSubmitting ? "Entrando..." : "Entrar"}
+                  </button>
                 </form>
               </FormProvider>
-              <Button
-                variant="secondary"
-                onClick={() => handleNavigation("/login-phone")}
+
+              <button
+                type="button"
+                disabled
+                className="flex h-10 w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 text-sm font-bold text-white opacity-60 shadow-md"
               >
+                <Lock className="h-4 w-4" aria-hidden="true" />
                 Entrar com Telefone
-              </Button>
-              <div className="text-center text-sm text-gray-600 mt-4">
+              </button>
+
+              <p className="text-center text-sm text-gray-600">
                 Não tem conta?{" "}
-                <span
-                  onClick={() => handleNavigation("/register")}
-                  className="font-medium text-emerald-500 underline underline-offset-4 hover:text-emerald-700 cursor-pointer transition-all duration-300"
+                <button
+                  type="button"
+                  onClick={() => router.push("/register")}
+                  className="cursor-pointer font-medium text-emerald-500 underline underline-offset-4 transition-all duration-300 hover:text-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
                 >
                   Cadastre-se
-                </span>
-              </div>
-            </motion.div>
-          </AnimatePresence>
-        </div>
-      )}
-    </>
+                </button>
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      </AnimatePresence>
+    </div>
   );
 }
