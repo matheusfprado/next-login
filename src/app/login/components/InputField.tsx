@@ -1,6 +1,9 @@
 import { Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 import { useFormContext } from "react-hook-form";
+import { Button } from "@/src/components/ui/button";
+import { Input } from "@/src/components/ui/input";
+import { Label } from "@/src/components/ui/label";
 
 interface InputFieldProps {
   name: string;
@@ -26,32 +29,32 @@ export function InputField({
 
   return (
     <div className="space-y-2">
-      <label htmlFor={name} className="block text-sm font-medium text-gray-900">
-        {label}
-      </label>
+      <Label htmlFor={name}>{label}</Label>
       <div className="relative">
-        <input
+        <Input
           id={name}
           type={inputType}
           placeholder={placeholder}
           aria-invalid={Boolean(error)}
           aria-describedby={error ? `${name}-error` : undefined}
           {...register(name)}
-          className="block h-10 w-full rounded-xl border border-gray-300 bg-gray-50 px-3 py-2 pr-10 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300"
+          className="h-10 pr-10"
         />
         {isPassword ? (
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon-sm"
             aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
             onClick={() => setShowPassword((current) => !current)}
-            className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-gray-500 transition hover:text-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-300"
+            className="absolute inset-y-1 right-1 text-muted-foreground"
           >
             {showPassword ? (
               <EyeOff className="h-4 w-4" aria-hidden="true" />
             ) : (
               <Eye className="h-4 w-4" aria-hidden="true" />
             )}
-          </button>
+          </Button>
         ) : null}
       </div>
       {error ? (

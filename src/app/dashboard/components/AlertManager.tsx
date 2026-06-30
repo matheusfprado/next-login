@@ -10,6 +10,10 @@ import {
 } from "@heroicons/react/24/outline";
 import { Button } from "../../components/Button";
 import { useCurrency } from "@/src/contexts/CurrencyContext";
+import { Button as ShadcnButton } from "@/src/components/ui/button";
+import { Card, CardContent } from "@/src/components/ui/card";
+import { Input } from "@/src/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
 
 type AlertDirection = "ABOVE" | "BELOW";
 type AlertDelivery = "EMAIL" | "SMS";
@@ -172,7 +176,8 @@ export function AlertManager({
   };
 
   return (
-    <div className="space-y-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+    <Card className="gap-0">
+      <CardContent className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
@@ -205,29 +210,28 @@ export function AlertManager({
       >
         <label className="flex flex-col text-sm text-gray-700">
           Criptomoeda
-          <select
-            className="appearance-none w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-10 text-sm text-gray-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-emerald-500"
+          <Select
             value={form.coinId}
-            onChange={(event) =>
-              setForm((prev) => ({ ...prev, coinId: event.target.value }))
-            }
-            required
+            onValueChange={(value) => setForm((prev) => ({ ...prev, coinId: value }))}
           >
+            <SelectTrigger className="mt-1 w-full"><SelectValue placeholder="Selecione" /></SelectTrigger>
+            <SelectContent>
             {coinOptions.map((coin) => (
-              <option key={coin.id} value={coin.id}>
+              <SelectItem key={coin.id} value={coin.id}>
                 {coin.name} ({coin.symbol.toUpperCase()})
-              </option>
+              </SelectItem>
             ))}
-          </select>
+            </SelectContent>
+          </Select>
         </label>
 
         <label className="flex flex-col text-sm text-gray-700">
           Preço alvo (USD)
-          <input
+          <Input
             type="number"
             step="0.01"
             min="0"
-            className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-emerald-500"
+            className="mt-1"
             value={form.targetPrice}
             onChange={(event) =>
               setForm((prev) => ({ ...prev, targetPrice: event.target.value }))
@@ -238,36 +242,30 @@ export function AlertManager({
 
         <label className="flex flex-col text-sm text-gray-700">
           Direção
-          <select
-            className="appearance-none w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-8 text-sm text-gray-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-emerald-500"
+          <Select
             value={form.direction}
-            onChange={(event) =>
-              setForm((prev) => ({
-                ...prev,
-                direction: event.target.value as AlertDirection,
-              }))
-            }
+            onValueChange={(value) => setForm((prev) => ({ ...prev, direction: value as AlertDirection }))}
           >
-            <option value="ABOVE">Preço &gt;= alvo</option>
-            <option value="BELOW">Preço &lt;= alvo</option>
-          </select>
+            <SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ABOVE">Preço &gt;= alvo</SelectItem>
+              <SelectItem value="BELOW">Preço &lt;= alvo</SelectItem>
+            </SelectContent>
+          </Select>
         </label>
 
         <label className="flex flex-col text-sm text-gray-700">
           Entrega
-          <select
-            className="appearance-none w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-8 text-sm text-gray-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-emerald-500"
+          <Select
             value={form.deliveryMethod}
-            onChange={(event) =>
-              setForm((prev) => ({
-                ...prev,
-                deliveryMethod: event.target.value as AlertDelivery,
-              }))
-            }
+            onValueChange={(value) => setForm((prev) => ({ ...prev, deliveryMethod: value as AlertDelivery }))}
           >
-            <option value="EMAIL">E-mail</option>
-            <option value="SMS">SMS</option>
-          </select>
+            <SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="EMAIL">E-mail</SelectItem>
+              <SelectItem value="SMS">SMS</SelectItem>
+            </SelectContent>
+          </Select>
         </label>
 
         <Button
@@ -319,20 +317,24 @@ export function AlertManager({
                     )}
                     {alert.status === "ACTIVE" ? "Ativo" : "Disparado"}
                   </span>
-                  <button
+                  <ShadcnButton
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
                     onClick={() => handleDelete(alert.id)}
-                    className="rounded-lg p-2 text-red-500 transition hover:bg-red-50"
+                    className="text-red-500 hover:bg-red-50 hover:text-red-600"
                     title="Remover alerta"
                   >
                     <TrashIcon className="h-4 w-4" />
-                  </button>
+                  </ShadcnButton>
                 </div>
               </div>
             </div>
           ))
         )}
       </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
 

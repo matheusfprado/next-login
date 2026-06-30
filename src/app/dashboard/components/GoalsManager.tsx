@@ -1,7 +1,6 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import clsx from "clsx";
 import {
   CalendarDaysIcon,
   FlagIcon,
@@ -9,6 +8,10 @@ import {
 } from "@heroicons/react/24/outline";
 import { Button } from "../../components/Button";
 import { useCurrency } from "@/src/contexts/CurrencyContext";
+import { Card, CardContent } from "@/src/components/ui/card";
+import { Input } from "@/src/components/ui/input";
+import { Progress } from "@/src/components/ui/progress";
+import { Textarea } from "@/src/components/ui/textarea";
 
 interface Goal {
   id: string;
@@ -142,7 +145,8 @@ export function GoalsManager({
   };
 
   return (
-    <div className="space-y-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+    <Card className="gap-0">
+      <CardContent className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-100 text-indigo-600">
@@ -172,8 +176,8 @@ export function GoalsManager({
       >
         <label className="flex flex-col text-sm text-gray-700">
           Título da meta
-          <input
-            className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+          <Input
+            className="mt-1"
             value={form.title}
             onChange={(event) =>
               setForm((prev) => ({ ...prev, title: event.target.value }))
@@ -184,10 +188,10 @@ export function GoalsManager({
 
         <label className="flex flex-col text-sm text-gray-700">
           Valor alvo (USD)
-          <input
+          <Input
             type="number"
             min="0"
-            className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+            className="mt-1"
             value={form.targetAmount}
             onChange={(event) =>
               setForm((prev) => ({
@@ -201,9 +205,9 @@ export function GoalsManager({
 
         <label className="flex flex-col text-sm text-gray-700">
           Prazo (opcional)
-          <input
+          <Input
             type="date"
-            className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+            className="mt-1"
             value={form.deadline}
             onChange={(event) =>
               setForm((prev) => ({ ...prev, deadline: event.target.value }))
@@ -223,8 +227,8 @@ export function GoalsManager({
 
         <label className="md:col-span-4 flex flex-col text-sm text-gray-700">
           Descrição (opcional)
-          <textarea
-            className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+          <Textarea
+            className="mt-1"
             rows={3}
             value={form.description}
             onChange={(event) =>
@@ -286,24 +290,17 @@ export function GoalsManager({
                     <span>Progresso</span>
                     <span>{percent.toFixed(0)}%</span>
                   </div>
-                  <div className="mt-2 h-2 w-full rounded-full bg-gray-200">
-                    <div
-                      className={clsx(
-                        "h-full rounded-full bg-gradient-to-r from-indigo-400 to-emerald-500 transition-all"
-                      )}
-                      style={{ width: `${percent}%` }}
-                    />
-                  </div>
+                  <Progress value={percent} className="mt-2" />
                 </div>
                 <div className="flex items-center gap-3 text-sm">
                   <span className="inline-flex items-center gap-2 text-gray-600">
                     <CalendarDaysIcon className="h-4 w-4" />
                     Atualizar progresso
                   </span>
-                  <input
+                  <Input
                     type="number"
                     min="0"
-                    className="w-32 rounded-lg border border-gray-300 bg-white px-3 py-1 text-sm text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+                    className="h-8 w-32"
                     defaultValue={goal.currentAmount}
                     onBlur={(event) =>
                       handleProgressUpdate(goal, Number(event.target.value))
@@ -315,7 +312,8 @@ export function GoalsManager({
           })}
         </ul>
       )}
-    </div>
+      </CardContent>
+    </Card>
   );
 }
 

@@ -4,6 +4,8 @@ import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 
 import { prisma } from "@/lib/prisma";
+import { sendNewLoginEmail } from "@/src/modules/auth/auth-emails.service";
+import { consumeLoginOtp } from "@/src/modules/auth/login-otp.service";
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
@@ -20,7 +22,7 @@ export const authOptions: NextAuthOptions = {
         }
 
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
+          where: { email: credentials.email.trim().toLowerCase() },
         });
 
         if (!user?.password) {
@@ -40,10 +42,35 @@ export const authOptions: NextAuthOptions = {
         };
       },
     }),
+    CredentialsProvider({
+      id: "email-token",
+      name: "Token por e-mail",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        token: { label: "Token", type: "text" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !/^\d{6}$/.test(credentials.token ?? "")) {
+          return null;
+        }
+
+        return consumeLoginOtp(credentials.email, credentials.token);
+      },
+    }),
   ],
   session: { strategy: "jwt" },
   secret: process.env.NEXTAUTH_SECRET,
   pages: { signIn: "/login" },
+  events: {
+    async signIn({ user }) {
+      if (!user.email) return;
+      try {
+        await sendNewLoginEmail(user.email);
+      } catch (error) {
+        console.error("Erro ao enviar alerta de novo login:", error);
+      }
+    },
+  },
   callbacks: {
     async jwt({ token, user }) {
       if (user) token.id = user.id;

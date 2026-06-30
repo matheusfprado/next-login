@@ -111,6 +111,25 @@ services:
       redis:
         condition: service_healthy
 
+  weekly-summary-worker:
+    build:
+      context: .
+      target: worker
+    restart: unless-stopped
+    command: ["npm", "run", "worker:weekly-summary"]
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/investhub?schema=public
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
 volumes:
   postgres_data:
   redis_data:

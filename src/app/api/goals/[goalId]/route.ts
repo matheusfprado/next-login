@@ -20,6 +20,16 @@ const updateSchema = z.object({
     .optional(),
 });
 
+function serializeGoal<
+  T extends { targetAmount: unknown; currentAmount: unknown }
+>(goal: T) {
+  return {
+    ...goal,
+    targetAmount: Number(goal.targetAmount),
+    currentAmount: Number(goal.currentAmount),
+  };
+}
+
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ goalId: string | string[] | undefined }> }
@@ -44,6 +54,18 @@ export async function PATCH(
   }
 
   const data = parsed.data;
+  const existing = await prisma.investmentGoal.findFirst({
+    where: { id: goalId, userId: session.user.id },
+  });
+  if (!existing) {
+    return NextResponse.json({ error: "Meta não encontrada" }, { status: 404 });
+  }
+
+  const nextTarget = data.targetAmount ?? Number(existing.targetAmount);
+  const nextCurrent = data.currentAmount ?? Number(existing.currentAmount);
+  const targetChanged =
+    data.targetAmount !== undefined &&
+    data.targetAmount !== Number(existing.targetAmount);
   const result = await prisma.investmentGoal.updateMany({
     where: { id: goalId, userId: session.user.id },
     data: {
@@ -52,6 +74,8 @@ export async function PATCH(
         data.description === undefined ? undefined : data.description ?? null,
       targetAmount: data.targetAmount ?? undefined,
       currentAmount: data.currentAmount ?? undefined,
+      achievedNotifiedAt:
+        targetChanged || nextCurrent < nextTarget ? null : undefined,
       deadline:
         data.deadline === undefined
           ? undefined
@@ -69,7 +93,7 @@ export async function PATCH(
     where: { id: goalId },
   });
 
-  return NextResponse.json(updated);
+  return NextResponse.json(updated ? serializeGoal(updated) : null);
 }
 
 export async function DELETE(

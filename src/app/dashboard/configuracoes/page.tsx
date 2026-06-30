@@ -2,7 +2,8 @@
 
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
-import Header from "../components/Header";
+import { useRouter } from "next/navigation";
+import Loading from "../../components/Loading";
 import {
   BellAlertIcon,
   EnvelopeIcon,
@@ -12,6 +13,15 @@ import {
   ChartBarIcon,
 } from "@heroicons/react/24/outline";
 import { Button } from "../../components/Button";
+import { Card, CardContent } from "@/src/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
+import { Switch } from "@/src/components/ui/switch";
+import {
+  Currency,
+  densityCode,
+  languageCode,
+  useCurrency,
+} from "@/src/contexts/CurrencyContext";
 
 interface ToggleSetting {
   id: string;
@@ -32,8 +42,10 @@ interface SelectSetting {
 
 export default function ConfiguracoesPage() {
   const { data: session, status } = useSession();
+  const router = useRouter();
+  const { setCurrency } = useCurrency();
   const [saving, setSaving] = useState(false);
-  const [, setLoadingSettings] = useState(true);
+  const [loadingSettings, setLoadingSettings] = useState(true);
   const [toggles, setToggles] = useState<Record<string, boolean>>({
     emailAlerts: true,
     smsAlerts: false,
@@ -141,7 +153,7 @@ export default function ConfiguracoesPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await fetch("/api/settings", {
+      const response = await fetch("/api/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -153,6 +165,20 @@ export default function ConfiguracoesPage() {
           dashboardDensity: selects.dashboardDensity,
         }),
       });
+      if (!response.ok) throw new Error("Falha ao salvar configurações");
+
+      const currencyMap: Record<string, Currency> = {
+        "Real (BRL)": "BRL",
+        "Dólar americano (USD)": "USD",
+        "Euro (EUR)": "EUR",
+        "Libra (GBP)": "GBP",
+      };
+      setCurrency(currencyMap[selects.currency] ?? "BRL");
+      document.documentElement.lang = languageCode(selects.language);
+      document.body.dataset.dashboardDensity = densityCode(
+        selects.dashboardDensity
+      );
+      router.refresh();
     } catch (error) {
       console.error("Erro ao salvar configurações:", error);
     } finally {
@@ -160,13 +186,32 @@ export default function ConfiguracoesPage() {
     }
   };
 
-  if (status === "unauthenticated") return null;
+  if (status === "loading") {
+    return (
+      <div className="px-6 py-8">
+        <Loading fullScreen={false} label="Carregando configurações..." />
+      </div>
+    );
+  }
+
+  if (!session) {
+    return (
+      <div className="px-6 py-8">
+        <Loading fullScreen={false} label="Redirecionando..." />
+      </div>
+    );
+  }
 
   return (
     <>
-      <Header userEmail={session?.user?.email ?? ""} cryptos={[]} />
-      <div className="flex w-full flex-col gap-8 px-6 py-8 lg:px-10">
-        <section className="rounded-3xl border border-emerald-100 bg-white p-6 shadow-sm">
+      {loadingSettings ? (
+        <div className="px-6 py-8">
+          <Loading fullScreen={false} label="Preparando suas preferências..." />
+        </div>
+      ) : (
+        <div className="flex w-full flex-col gap-8 px-4 py-6 lg:px-6">
+        <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-card">
+          <CardContent>
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="text-sm uppercase tracking-widest text-emerald-500">
@@ -188,14 +233,16 @@ export default function ConfiguracoesPage() {
               Aplicar configurações
             </Button>
           </div>
-        </section>
+          </CardContent>
+        </Card>
 
         <section className="grid gap-6 lg:grid-cols-2">
           {toggleSettings.map((setting) => (
-            <div
+            <Card
               key={setting.id}
-              className="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
+              className="gap-0"
             >
+              <CardContent className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
                   {setting.icon}
@@ -209,21 +256,14 @@ export default function ConfiguracoesPage() {
                   </p>
                 </div>
               </div>
-              <label className="relative inline-flex items-center">
-                <input
-                  type="checkbox"
-                  className="peer sr-only"
-                  checked={setting.value}
-                  onChange={(event) => handleToggle(setting.id, event.target.checked)}
-                />
-                <span className="peer h-5 w-10 rounded-full bg-gray-200 transition peer-checked:bg-emerald-500"></span>
-                <span className="absolute left-0.5 h-4 w-4 rounded-full bg-white transition peer-checked:translate-x-5"></span>
-              </label>
-            </div>
+              <Switch checked={setting.value} onCheckedChange={(checked) => handleToggle(setting.id, checked)} aria-label={setting.title} />
+              </CardContent>
+            </Card>
           ))}
         </section>
 
-        <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <Card className="gap-0">
+          <CardContent>
           <h2 className="text-lg font-semibold text-gray-900">
             Preferências gerais
           </h2>
@@ -249,22 +289,20 @@ export default function ConfiguracoesPage() {
                     </p>
                   </div>
                 </div>
-                <select
+                <Select
                   value={setting.value}
-                  onChange={(event) => handleSelect(setting.id, event.target.value)}
-                  className="appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-emerald-500"
+                  onValueChange={(value) => handleSelect(setting.id, value)}
                 >
-                  {setting.options.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                  <SelectContent>{setting.options.map((option) => <SelectItem key={option} value={option}>{option}</SelectItem>)}</SelectContent>
+                </Select>
               </label>
             ))}
           </div>
-        </section>
+          </CardContent>
+        </Card>
         </div>
+      )}
     </>
   );
 }

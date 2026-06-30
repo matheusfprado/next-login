@@ -12,6 +12,7 @@ import clsx from "clsx";
 import { Button } from "../../components/Button";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import Brand from "../../components/Brand";
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -97,17 +98,7 @@ export default function Sidebar() {
         )}
       >
         <div className="flex items-center gap-3 border-b border-gray-100 px-6 py-5">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 via-green-500 to-lime-400 text-white font-semibold shadow-md">
-            IH
-          </div>
-          <div>
-            <p className="text-base font-semibold text-gray-900">
-              InvestHub
-            </p>
-            <span className="text-xs text-gray-500">
-              Painel inteligente
-            </span>
-          </div>
+          <Brand subtitle="Painel inteligente" />
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 py-6">

@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useRef } from "react";
+import { Input } from "@/src/components/ui/input";
 
 type OTPInputProps = {
   code: string[];
@@ -36,7 +37,7 @@ export const OTPInput: React.FC<OTPInputProps> = ({
   return (
     <div className="flex justify-center gap-2">
       {Array.from({ length }).map((_, idx) => (
-        <input
+        <Input
           key={idx}
           ref={(el) => {
             inputRefs.current[idx] = el; // <-- só atribui, não retorna nada
@@ -47,7 +48,7 @@ export const OTPInput: React.FC<OTPInputProps> = ({
           value={code[idx] || ""}
           onChange={(e) => handleChange(e.target.value, idx)}
           onKeyDown={(e) => handleKeyDown(e, idx)}
-          className="w-12 h-12 text-center rounded-xl border border-gray-300 bg-gray-50 text-gray-900 text-lg focus:outline-none focus:ring-2 focus:ring-gray-400"
+          className="size-12 text-center text-lg"
         />
       ))}
     </div>

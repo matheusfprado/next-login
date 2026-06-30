@@ -8,31 +8,57 @@ datasource db {
 }
 
 model User {
-  id              String           @id @default(cuid())
-  name            String?
-  email           String?          @unique
-  password        String?
-  phone           String?          @unique
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  investmentGoals InvestmentGoal[]
-  portfolios      Portfolio[]
-  priceAlerts     PriceAlert[]
-  preferences     UserPreference?
+  id                      String                   @id @default(cuid())
+  name                    String?
+  email                   String?                  @unique
+  emailVerified           DateTime?
+  password                String?
+  phone                   String?                  @unique
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  investmentGoals         InvestmentGoal[]
+  portfolios              Portfolio[]
+  portfolioTransactions   PortfolioTransaction[]
+  priceAlerts             PriceAlert[]
+  preferences             UserPreference?
+  emailVerificationTokens EmailVerificationToken[]
+  passwordResetTokens     PasswordResetToken[]
+  emailNotifications      EmailNotification[]
 }
 
 model Portfolio {
-  id        String   @id @default(cuid())
-  userId    String
-  coinId    String
-  coinName  String
-  amount    Float
-  buyPrice  Float
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String   @id @default(cuid())
+  userId         String
+  coinId         String
+  coinName       String
+  amount         Decimal  @db.Decimal(36, 18)
+  buyPrice       Decimal  @db.Decimal(36, 18)
+  realizedProfit Decimal  @default(0) @db.Decimal(36, 18)
+  totalFees      Decimal  @default(0) @db.Decimal(36, 18)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, coinId])
   @@index([userId])
+}
+
+model PortfolioTransaction {
+  id             String                   @id @default(cuid())
+  userId         String
+  coinId         String
+  coinName       String
+  type           PortfolioTransactionType
+  amount         Decimal                  @db.Decimal(36, 18)
+  unitPrice      Decimal                  @db.Decimal(36, 18)
+  fee            Decimal                  @default(0) @db.Decimal(36, 18)
+  realizedProfit Decimal                  @default(0) @db.Decimal(36, 18)
+  occurredAt     DateTime                 @default(now())
+  createdAt      DateTime                 @default(now())
+  user           User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, occurredAt])
+  @@index([userId, coinId, occurredAt])
 }
 
 model PriceAlert {
@@ -40,7 +66,7 @@ model PriceAlert {
   userId         String
   coinId         String
   coinName       String
-  targetPrice    Float
+  targetPrice    Decimal        @db.Decimal(36, 18)
   direction      AlertDirection @default(ABOVE)
   deliveryMethod AlertDelivery  @default(EMAIL)
   status         AlertStatus    @default(ACTIVE)
@@ -54,32 +80,75 @@ model PriceAlert {
 }
 
 model InvestmentGoal {
-  id            String    @id @default(cuid())
-  userId        String
-  title         String
-  description   String?
-  targetAmount  Float
-  currentAmount Float     @default(0)
-  deadline      DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                 String    @id @default(cuid())
+  userId             String
+  title              String
+  description        String?
+  targetAmount       Decimal   @db.Decimal(36, 18)
+  currentAmount      Decimal   @default(0) @db.Decimal(36, 18)
+  deadline           DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  achievedNotifiedAt DateTime?
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
 
 model UserPreference {
-  id               String   @id @default(cuid())
-  userId           String   @unique
-  emailAlerts      Boolean  @default(true)
-  smsAlerts        Boolean  @default(false)
-  weeklySummary    Boolean  @default(true)
-  language         String   @default("Português (Brasil)")
-  currency         String   @default("Real (BRL)")
-  dashboardDensity String   @default("Confortável")
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                  String    @id @default(cuid())
+  userId              String    @unique
+  emailAlerts         Boolean   @default(true)
+  smsAlerts           Boolean   @default(false)
+  weeklySummary       Boolean   @default(true)
+  language            String    @default("Português (Brasil)")
+  currency            String    @default("Real (BRL)")
+  dashboardDensity    String    @default("Confortável")
+  lastWeeklySummaryAt DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model EmailVerificationToken {
+  id        String                   @id @default(cuid())
+  userId    String
+  tokenHash String                   @unique
+  email     String
+  purpose   EmailVerificationPurpose @default(ACCOUNT_VERIFICATION)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime                 @default(now())
+  user      User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model EmailNotification {
+  id        String                @id @default(cuid())
+  userId    String
+  type      EmailNotificationType
+  key       String
+  sentAt    DateTime?
+  createdAt DateTime              @default(now())
+  user      User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type, key])
+  @@index([createdAt])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model CryptoPriceHistory {
@@ -87,10 +156,10 @@ model CryptoPriceHistory {
   coinId    String
   coinName  String
   symbol    String
-  priceUsd  Float
-  marketCap Float?
-  volume24h Float?
-  change24h Float?
+  priceUsd  Decimal  @db.Decimal(36, 18)
+  marketCap Decimal? @db.Decimal(36, 18)
+  volume24h Decimal? @db.Decimal(36, 18)
+  change24h Decimal? @db.Decimal(36, 18)
   createdAt DateTime @default(now())
 
   @@index([coinId, createdAt])
@@ -111,4 +180,20 @@ enum AlertStatus {
   ACTIVE
   TRIGGERED
   DISABLED
+}
+
+enum PortfolioTransactionType {
+  BUY
+  SELL
+  ADJUSTMENT
+}
+
+enum EmailVerificationPurpose {
+  ACCOUNT_VERIFICATION
+  EMAIL_CHANGE
+}
+
+enum EmailNotificationType {
+  GOAL_ACHIEVED
+  ABRUPT_VARIATION
 }

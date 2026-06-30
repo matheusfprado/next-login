@@ -1,13 +1,12 @@
 "use client";
 
+import { ArrowTrendingDownIcon, ArrowTrendingUpIcon } from "@heroicons/react/24/outline";
 import Image from "next/image";
-import React from "react";
-import {
-  ArrowTrendingUpIcon,
-  ArrowTrendingDownIcon,
-} from "@heroicons/react/24/outline";
-import { DashboardCrypto } from "../types";
+
+import { Badge } from "@/src/components/ui/badge";
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/src/components/ui/table";
 import { useCurrency } from "@/src/contexts/CurrencyContext";
+import { DashboardCrypto } from "../types";
 
 interface CryptoTableProps {
   cryptos: DashboardCrypto[];
@@ -17,95 +16,50 @@ interface CryptoTableProps {
 
 export default function CryptoTable({ cryptos, exchangeRate }: CryptoTableProps) {
   const { currency } = useCurrency();
-  const currencyFormatter = new Intl.NumberFormat(
-    currency === "BRL" ? "pt-BR" : "en-US",
-    {
-      style: "currency",
-      currency,
-    }
-  );
+  const formatter = new Intl.NumberFormat(currency === "BRL" ? "pt-BR" : "en-US", { style: "currency", currency });
 
   return (
-    <div className="max-h-[380px] overflow-x-auto">
-      <table className="min-w-full rounded-xl border border-gray-200 bg-white text-[12px] shadow-sm">
-        <thead className="border-b border-gray-200 bg-gray-50">
-          <tr>
-            <th className="text-left p-2 w-1/3">Nome</th>
-            <th className="text-right p-2 w-1/6">Preço</th>
-            <th className="text-right p-2 w-1/6">Variação 24h</th>
-          </tr>
-        </thead>
-        <tbody>
-          {cryptos.length > 0 ? (
-            cryptos.map((coin, index) => {
-              const isTop3 = index < 3;
-              const displayPrice = coin.current_price * exchangeRate;
-              const change = coin.price_change_percentage_24h;
-              const hasChange = typeof change === "number";
-              const isPositiveChange = hasChange && change >= 0;
-
-              return (
-                <tr
-                  key={coin.id}
-                  className={`border-b border-gray-200 transition ${
-                    isTop3
-                      ? "bg-emerald-50/60"
-                      : "hover:bg-gray-50"
-                  }`}
-                >
-                  <td className="flex items-center gap-2 p-2">
-                    <Image
-                      src={coin.image}
-                      alt={coin.name}
-                      width={20}
-                      height={20}
-                      className="w-5 h-5 rounded-full border border-gray-200"
-                    />
-                    <div className="flex flex-col">
-                      <span className="font-semibold text-gray-900">
-                        {coin.name}
-                      </span>
-                      <span className="text-gray-500 uppercase">
-                        {coin.symbol}
-                      </span>
+    <div className="max-h-[440px] overflow-auto rounded-xl border bg-card">
+      <Table>
+        <TableCaption className="sr-only">Ranking das principais criptomoedas por valor de mercado</TableCaption>
+        <TableHeader className="sticky top-0 z-10 bg-muted/95 backdrop-blur-sm">
+          <TableRow>
+            <TableHead>Ativo</TableHead>
+            <TableHead className="text-right">Preço</TableHead>
+            <TableHead className="text-right">24h</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {cryptos.length > 0 ? cryptos.map((coin, index) => {
+            const change = coin.price_change_percentage_24h;
+            const hasChange = typeof change === "number";
+            const positive = hasChange && change >= 0;
+            return (
+              <TableRow key={coin.id} className="hover:bg-primary/5">
+                <TableCell>
+                  <div className="flex min-w-[150px] items-center gap-3">
+                    <Badge variant="secondary" className={index < 3 ? "bg-primary/15 text-emerald-700" : undefined}>{index + 1}</Badge>
+                    <Image src={coin.image} alt="" width={32} height={32} className="size-8 rounded-full ring-1 ring-border" />
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold">{coin.name}</p>
+                      <p className="text-xs font-medium uppercase text-muted-foreground">{coin.symbol}</p>
                     </div>
-                  </td>
-                  <td className="p-2 text-right font-semibold text-gray-900">
-                    {currencyFormatter.format(displayPrice)}
-                  </td>
-                  <td className="p-2 text-right">
-                    <div
-                      className={
-                        hasChange
-                          ? isPositiveChange
-                            ? "inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 font-medium text-emerald-700"
-                            : "inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 font-medium text-red-700"
-                          : "inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 font-medium text-gray-600"
-                      }
-                    >
-                      {hasChange ? (
-                        isPositiveChange ? (
-                          <ArrowTrendingUpIcon className="h-3.5 w-3.5" />
-                        ) : (
-                          <ArrowTrendingDownIcon className="h-3.5 w-3.5" />
-                        )
-                      ) : null}
-                      {hasChange ? `${change.toFixed(2)}%` : "--"}
-                    </div>
-                  </td>
-                </tr>
-              );
-            })
-          ) : (
-            <tr>
-              <td colSpan={3} className="text-center p-2 text-gray-500">
-                Nenhum relatório encontrado
-              </td>
-            </tr>
+                  </div>
+                </TableCell>
+                <TableCell className="whitespace-nowrap text-right font-semibold tabular-nums">{formatter.format(coin.current_price * exchangeRate)}</TableCell>
+                <TableCell className="text-right">
+                  <Badge variant="secondary" className={hasChange ? positive ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700" : undefined}>
+                    {hasChange && (positive ? <ArrowTrendingUpIcon /> : <ArrowTrendingDownIcon />)}
+                    {hasChange ? `${change.toFixed(2)}%` : "--"}
+                  </Badge>
+                </TableCell>
+              </TableRow>
+            );
+          }) : (
+            <TableRow><TableCell colSpan={3} className="h-32 text-center text-muted-foreground">Nenhuma criptomoeda encontrada</TableCell></TableRow>
           )}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }
-

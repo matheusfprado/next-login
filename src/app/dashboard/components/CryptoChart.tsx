@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -18,6 +18,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { DashboardCrypto } from "../types";
 import { useCurrency } from "@/src/contexts/CurrencyContext";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
 
 interface CryptoChartProps {
   cryptos: DashboardCrypto[];
@@ -31,16 +32,67 @@ export default function CryptoChart({
   className,
 }: CryptoChartProps) {
   const [selectedCoin, setSelectedCoin] = useState("bitcoin");
+  const [history, setHistory] = useState<
+    Array<{ timestamp: string; priceUsd: number }>
+  >([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
   const { currency } = useCurrency();
 
   const coin =
     cryptos.find((c) => c.id === selectedCoin) || cryptos[0] || null;
 
-  const data =
-    coin?.sparkline_in_7d?.price.map((p: number, i: number) => ({
-      time: i,
-      price: p * exchangeRate,
-    })) || [];
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const loadHistory = async () => {
+      setHistoryLoading(true);
+      try {
+        const response = await fetch(
+          `/api/cryptos/${encodeURIComponent(selectedCoin)}/history?range=7d&points=300`,
+          { signal: controller.signal }
+        );
+        if (!response.ok) throw new Error("Falha ao carregar histórico");
+        const data: unknown = await response.json();
+        if (
+          data &&
+          typeof data === "object" &&
+          "points" in data &&
+          Array.isArray(data.points)
+        ) {
+          setHistory(
+            data.points.filter(
+              (point): point is { timestamp: string; priceUsd: number } =>
+                !!point &&
+                typeof point === "object" &&
+                "timestamp" in point &&
+                "priceUsd" in point &&
+                typeof point.timestamp === "string" &&
+                typeof point.priceUsd === "number"
+            )
+          );
+        }
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error("Erro ao carregar histórico de preços:", error);
+          setHistory([]);
+        }
+      } finally {
+        if (!controller.signal.aborted) setHistoryLoading(false);
+      }
+    };
+
+    void loadHistory();
+    return () => controller.abort();
+  }, [selectedCoin]);
+
+  const data = useMemo(
+    () =>
+      history.map((point) => ({
+        time: point.timestamp,
+        price: point.priceUsd * exchangeRate,
+      })),
+    [exchangeRate, history]
+  );
 
   const currencyFormatter = useMemo(
     () =>
@@ -67,7 +119,7 @@ export default function CryptoChart({
     data.length > 0 ? ((data[data.length - 1].price - data[0].price) / data[0].price) * 100 : null;
 
   return (
-    <div className={clsx("rounded-2xl border border-gray-200 bg-white p-6 shadow-sm", className)}>
+    <div className={className}>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
@@ -87,38 +139,14 @@ export default function CryptoChart({
           >
             Selecione a moeda:
           </label>
-          <div className="relative inline-block w-48">
-            <select
+          <div className="w-48">
+            <Select
               value={selectedCoin}
-              onChange={(e) => setSelectedCoin(e.target.value)}
-              className="appearance-none w-full rounded-lg border border-gray-300 bg-white px-4 py-2 pr-10 text-sm text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              onValueChange={setSelectedCoin}
             >
-              {cryptos.length > 0 ? (
-                cryptos.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} ({c.symbol.toUpperCase()})
-                  </option>
-                ))
-              ) : (
-                <option disabled>Carregando...</option>
-              )}
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-              <svg
-                className="w-4 h-4 text-gray-500"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
-            </div>
+              <SelectTrigger className="w-full"><SelectValue placeholder="Selecione" /></SelectTrigger>
+              <SelectContent>{cryptos.map((item) => <SelectItem key={item.id} value={item.id}>{item.name} ({item.symbol.toUpperCase()})</SelectItem>)}</SelectContent>
+            </Select>
           </div>
         </div>
       </div>
@@ -148,6 +176,15 @@ export default function CryptoChart({
           </div>
         </div>
       )}
+      {historyLoading ? (
+        <div className="flex h-[220px] items-center justify-center text-sm text-gray-500">
+          Carregando histórico...
+        </div>
+      ) : data.length === 0 ? (
+        <div className="flex h-[220px] items-center justify-center text-center text-sm text-gray-500">
+          O histórico será exibido após o worker registrar os primeiros preços.
+        </div>
+      ) : (
       <ResponsiveContainer width="100%" height={220}>
         <AreaChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
           <defs>
@@ -162,6 +199,12 @@ export default function CryptoChart({
             axisLine={false}
             tickLine={false}
             tick={{ fill: "#9ca3af", fontSize: 12 }}
+            tickFormatter={(value: string) =>
+              new Date(value).toLocaleDateString("pt-BR", {
+                day: "2-digit",
+                month: "2-digit",
+              })
+            }
           />
           <YAxis
             axisLine={false}
@@ -174,6 +217,9 @@ export default function CryptoChart({
             contentStyle={{ backgroundColor: "#1f2937", borderRadius: 8, border: "none" }}
             itemStyle={{ color: "#f9fafb" }}
             formatter={formatChartCurrency}
+            labelFormatter={(value) =>
+              new Date(String(value)).toLocaleString("pt-BR")
+            }
           />
           <Area
             type="monotone"
@@ -185,6 +231,7 @@ export default function CryptoChart({
           />
         </AreaChart>
       </ResponsiveContainer>
+      )}
     </div>
   );
 }

@@ -1,7 +1,10 @@
 "use client";
 
 import { ReactNode } from "react";
-import { Loader2 } from "lucide-react"; 
+import { Loader2 } from "lucide-react";
+
+import { Button as ShadcnButton } from "@/src/components/ui/button";
+import { cn } from "@/src/lib/utils";
 
 interface ButtonProps {
   children: ReactNode;
@@ -19,32 +22,25 @@ export function Button({
   variant = "primary",
   loading = false,
   disabled = false,
-  className = "",
+  className,
   onClick,
 }: ButtonProps) {
-  const baseStyles =
-    "w-full rounded-xl px-4 py-2 font-medium shadow-sm focus:outline-none focus:ring-2 transition duration-200 flex justify-center items-center gap-2";
-
-  const variants: Record<string, string> = {
-    primary:
-      "bg-black text-white hover:bg-gray-900 focus:ring-gray-400",
-    secondary:
-      "bg-emerald-500 text-white hover:bg-emerald-600 focus:ring-emerald-400",
-    danger: "bg-red-500 text-white hover:bg-red-600 focus:ring-red-400",
-    ghost: "bg-transparent text-gray-900 hover:bg-gray-100 focus:ring-gray-400",
-  };
-
   return (
-    <button
+    <ShadcnButton
       type={type}
+      variant={variant === "danger" ? "destructive" : variant === "ghost" ? "ghost" : "default"}
       disabled={disabled || loading}
+      aria-busy={loading}
       onClick={onClick}
-      className={`${baseStyles} ${variants[variant]} ${
-        disabled || loading ? "opacity-70 cursor-not-allowed" : ""
-      } ${className}`}
+      className={cn(
+        "w-full rounded-xl",
+        variant === "primary" && "bg-gray-950 text-white hover:bg-gray-800",
+        variant === "secondary" && "bg-primary text-primary-foreground hover:bg-primary/90",
+        className
+      )}
     >
-      {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+      {loading && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
       {children}
-    </button>
+    </ShadcnButton>
   );
 }

@@ -16,6 +16,16 @@ const goalSchema = z.object({
     .optional(),
 });
 
+function serializeGoal<
+  T extends { targetAmount: unknown; currentAmount: unknown }
+>(goal: T) {
+  return {
+    ...goal,
+    targetAmount: Number(goal.targetAmount),
+    currentAmount: Number(goal.currentAmount),
+  };
+}
+
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
@@ -27,7 +37,7 @@ export async function GET() {
     orderBy: { createdAt: "desc" },
   });
 
-  return NextResponse.json(goals);
+  return NextResponse.json(goals.map(serializeGoal));
 }
 
 export async function POST(req: Request) {
@@ -60,5 +70,5 @@ export async function POST(req: Request) {
     },
   });
 
-  return NextResponse.json(goal, { status: 201 });
+  return NextResponse.json(serializeGoal(goal), { status: 201 });
 }

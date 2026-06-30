@@ -1,101 +1,70 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
+import { NewspaperIcon } from "@heroicons/react/24/outline";
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { NewspaperIcon } from "@heroicons/react/24/outline";
+
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card";
+
 interface NewsItem {
   title: string;
   source: string;
   date: string;
   url: string;
-  enclosure?: { link: string };
+  image?: string;
+}
+
+interface NewsResponseItem {
+  title?: string;
+  author?: string;
+  source?: string;
+  pubDate?: string;
+  link?: string;
+  enclosure?: { link?: string };
 }
 
 export default function CryptoNews() {
   const [news, setNews] = useState<NewsItem[]>([]);
-  const [, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchNews = async () => {
       try {
-        const res = await fetch("/api/news");
-        const data = await res.json();
-
-        if (Array.isArray(data.items)) {
-          setNews(
-            data.items.map((item: any) => ({
-              title: item.title,
-              source: item.author || item.source || "CryptoNews",
-              date: item.pubDate,
-              url: item?.link,
-              enclosure: item?.enclosure || undefined,
-            }))
-          );
-        } else {
-          setNews([]);
-        }
-      } catch (err) {
-        console.error("Erro ao buscar notícias:", err);
+        const response = await fetch("/api/news");
+        const data: { items?: NewsResponseItem[] } = await response.json();
+        setNews((data.items ?? []).flatMap((item) => item.title && item.pubDate && item.link ? [{ title: item.title, source: item.author || item.source || "CryptoNews", date: item.pubDate, url: item.link, image: item.enclosure?.link }] : []));
+      } catch (error) {
+        console.error("Erro ao buscar notícias:", error);
         setNews([]);
-      } finally {
-        setLoading(false);
       }
     };
-
-    fetchNews();
+    void fetchNews();
   }, []);
 
-  if (news.length === 0) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <span className="text-gray-500">Nenhuma notícia encontrada</span>
-      </div>
-    );
-  }
-
   return (
-    <div className="bg-white shadow rounded-2xl p-6">
-      <h3 className="text-2xl font-bold mb-6 text-gray-900">
-        Últimas Notícias
-      </h3>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {news.map((item, index) => (
-          <a
-            key={index}
-            href={item.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group block rounded-xl overflow-hidden shadow hover:shadow-lg transition"
-          >
-            <div className="relative h-48 w-full">
-              {item.enclosure?.link ? (
-                <Image
-                  src={item.enclosure?.link}
-                  alt={item.source}
-                  width={1080}
-                  height={900}
-                  className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300"
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center bg-gray-200 text-gray-500">
-                  <NewspaperIcon className="h-10 w-10" />
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-2xl">Últimas notícias</CardTitle>
+        <CardDescription>Atualizações recentes do mercado cripto.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {news.length === 0 ? (
+          <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">Nenhuma notícia encontrada</div>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {news.map((item) => (
+              <a key={`${item.url}-${item.date}`} href={item.url} target="_blank" rel="noopener noreferrer" className="group overflow-hidden rounded-xl border bg-card transition-shadow hover:shadow-md">
+                <div className="relative h-44 w-full overflow-hidden bg-muted">
+                  {item.image ? <Image src={item.image} alt="" fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover transition-transform duration-300 group-hover:scale-105" /> : <div className="flex h-full items-center justify-center text-muted-foreground"><NewspaperIcon className="size-10" /></div>}
                 </div>
-              )}
-            </div>
-            <div className="p-4 bg-white">
-              <h4 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2 group-hover:text-blue-500 transition-colors">
-                {item.title}
-              </h4>
-              <p className="text-sm text-gray-500">
-                {item.source} • {new Date(item.date).toLocaleDateString("pt-BR")}
-              </p>
-            </div>
-          </a>
-        ))}
-      </div>
-    </div>
+                <div className="space-y-2 p-4">
+                  <h3 className="line-clamp-2 font-semibold group-hover:text-emerald-600">{item.title}</h3>
+                  <p className="text-sm text-muted-foreground">{item.source} • {new Date(item.date).toLocaleDateString("pt-BR")}</p>
+                </div>
+              </a>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
-

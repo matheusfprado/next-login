@@ -9,9 +9,9 @@ const baseSettingsSchema = z.object({
   emailAlerts: z.boolean(),
   smsAlerts: z.boolean(),
   weeklySummary: z.boolean(),
-  language: z.string().min(2),
-  currency: z.string().min(2),
-  dashboardDensity: z.string().min(2),
+  language: z.enum(["Português (Brasil)", "Inglês (EUA)", "Espanhol", "Francês"]),
+  currency: z.enum(["Real (BRL)", "Dólar americano (USD)", "Euro (EUR)", "Libra (GBP)"]),
+  dashboardDensity: z.enum(["Confortável", "Compacto", "Espaçoso"]),
 });
 
 const settingsSchema = baseSettingsSchema.partial().refine(
@@ -85,10 +85,20 @@ export async function PATCH(request: Request) {
     emailAlerts: parsed.data.emailAlerts ?? existing?.emailAlerts ?? true,
     smsAlerts: parsed.data.smsAlerts ?? existing?.smsAlerts ?? false,
     weeklySummary: parsed.data.weeklySummary ?? existing?.weeklySummary ?? true,
-    language: parsed.data.language ?? existing?.language ?? "Português (Brasil)",
-    currency: parsed.data.currency ?? existing?.currency ?? "Real (BRL)",
+    language:
+      parsed.data.language ??
+      baseSettingsSchema.shape.language.safeParse(existing?.language).data ??
+      "Português (Brasil)",
+    currency:
+      parsed.data.currency ??
+      baseSettingsSchema.shape.currency.safeParse(existing?.currency).data ??
+      "Real (BRL)",
     dashboardDensity:
-      parsed.data.dashboardDensity ?? existing?.dashboardDensity ?? "Confortável",
+      parsed.data.dashboardDensity ??
+      baseSettingsSchema.shape.dashboardDensity.safeParse(
+        existing?.dashboardDensity
+      ).data ??
+      "Confortável",
   } satisfies z.infer<typeof baseSettingsSchema>;
 
   const updated = await prisma.userPreference.upsert({

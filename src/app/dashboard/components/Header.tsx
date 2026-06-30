@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { BellIcon, ChartBarIcon } from "@heroicons/react/24/outline";
 import { DashboardCrypto } from "../types";
-import { useCurrency } from "@/src/contexts/CurrencyContext";
+import { Currency, useCurrency } from "@/src/contexts/CurrencyContext";
 
 interface HeaderProps {
   userEmail?: string;
@@ -53,12 +53,14 @@ export default function Header({ userEmail = "", cryptos }: HeaderProps) {
           <select
             value={currency}
             onChange={(event) =>
-              setCurrency(event.target.value === "USD" ? "USD" : "BRL")
+              setCurrency(event.target.value as Currency)
             }
             className="h-9 rounded-lg border border-gray-300 bg-white px-3 text-sm font-semibold text-gray-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-300"
           >
             <option value="BRL">Real</option>
             <option value="USD">Dólar</option>
+            <option value="EUR">Euro</option>
+            <option value="GBP">Libra</option>
           </select>
         </label>
         <div ref={dropdownRef} className="relative">

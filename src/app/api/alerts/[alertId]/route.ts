@@ -9,6 +9,10 @@ const updateSchema = z.object({
   status: z.enum(["ACTIVE", "TRIGGERED", "DISABLED"]).optional(),
 });
 
+function serializeAlert<T extends { targetPrice: unknown }>(alert: T) {
+  return { ...alert, targetPrice: Number(alert.targetPrice) };
+}
+
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ alertId: string | string[] | undefined }> }
@@ -50,7 +54,7 @@ export async function PATCH(
     where: { id: alertId },
   });
 
-  return NextResponse.json(updated);
+  return NextResponse.json(updated ? serializeAlert(updated) : null);
 }
 
 export async function DELETE(

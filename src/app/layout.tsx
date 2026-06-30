@@ -2,23 +2,27 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { SessionProviderWrapper } from "./SessionProviderWrapper";
 import { ReactNode } from "react";
-import { ToastProvider } from "@/src/components/ui/toast";
+import { Toaster } from "@/src/components/ui/sonner";
 import { CurrencyProvider } from "@/src/contexts/CurrencyContext";
 
 export const metadata: Metadata = {
   title: "InvestHub",
   description: "Plataforma de investimentos",
+  icons: {
+    icon: "/icon.png",
+    shortcut: "/icon.png",
+    apple: "/icon.png",
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="pt-BR">
-      <body className="min-h-screen bg-gray-100 font-sans text-gray-800">
-        <ToastProvider>
-          <CurrencyProvider>
-            <SessionProviderWrapper>{children}</SessionProviderWrapper>
-          </CurrencyProvider>
-        </ToastProvider>
+      <body className="min-h-screen bg-background font-sans text-foreground">
+        <CurrencyProvider>
+          <SessionProviderWrapper>{children}</SessionProviderWrapper>
+        </CurrencyProvider>
+        <Toaster />
       </body>
     </html>
   );

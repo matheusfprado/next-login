@@ -4,14 +4,22 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Button } from "../../components/Button";
-import Header from "../components/Header";
 import {
   ArrowTrendingDownIcon,
   ArrowTrendingUpIcon,
+  PencilSquareIcon,
   SparklesIcon,
+  TrashIcon,
 } from "@heroicons/react/24/outline";
 import clsx from "clsx";
 import { useCurrency } from "@/src/contexts/CurrencyContext";
+import { Input } from "@/src/components/ui/input";
+import { Card } from "@/src/components/ui/card";
+import { Button as ShadcnButton } from "@/src/components/ui/button";
+import { Progress } from "@/src/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
+import { Table } from "@/src/components/ui/table";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/src/components/ui/dialog";
 
 interface PortfolioItem {
   id: string;
@@ -19,7 +27,20 @@ interface PortfolioItem {
   coinName: string;
   amount: number;
   buyPrice: number;
+  realizedProfit?: number;
+  totalFees?: number;
   createdAt: string;
+}
+
+interface PortfolioTransaction {
+  id: string;
+  coinName: string;
+  type: "BUY" | "SELL" | "ADJUSTMENT";
+  amount: number;
+  unitPrice: number;
+  fee: number;
+  realizedProfit: number;
+  occurredAt: string;
 }
 
 interface CryptoMarket {
@@ -49,11 +70,12 @@ const formatNumber = (value: number, fractionDigits = 4) =>
   }).format(Number.isFinite(value) ? value : 0);
 
 export default function CarteiraPage() {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
   const { formatCurrency } = useCurrency();
 
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
+  const [transactions, setTransactions] = useState<PortfolioTransaction[]>([]);
   const [cryptos, setCryptos] = useState<CryptoMarket[]>([]);
   const [isFetching, setIsFetching] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -61,11 +83,15 @@ export default function CarteiraPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [form, setForm] = useState({
+    type: "BUY" as "BUY" | "SELL",
     coinId: "",
     coinName: "",
     amount: "",
     buyPrice: "",
+    fee: "0",
   });
+  const [editing, setEditing] = useState<PortfolioItem | null>(null);
+  const [editForm, setEditForm] = useState({ amount: "", buyPrice: "" });
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -81,9 +107,10 @@ export default function CarteiraPage() {
       setError(null);
 
       try {
-        const [portfolioRes, cryptoRes] = await Promise.all([
+        const [portfolioRes, cryptoRes, transactionsRes] = await Promise.all([
           fetch("/api/portifolio"),
           fetch("/api/cryptos"),
+          fetch("/api/portifolio/transactions?pageSize=50"),
         ]);
 
         if (portfolioRes.status === 401) {
@@ -93,9 +120,13 @@ export default function CarteiraPage() {
 
         const portfolioData = await portfolioRes.json();
         const cryptoData = await cryptoRes.json();
+        const transactionsData = await transactionsRes.json();
 
         setPortfolio(Array.isArray(portfolioData) ? portfolioData : []);
         setCryptos(Array.isArray(cryptoData) ? cryptoData : []);
+        setTransactions(
+          Array.isArray(transactionsData?.items) ? transactionsData.items : []
+        );
 
         if (Array.isArray(cryptoData) && cryptoData.length > 0) {
           const firstCoin = cryptoData[0];
@@ -234,10 +265,12 @@ export default function CarteiraPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          type: form.type,
           coinId: form.coinId,
           coinName: form.coinName || selectedCoin?.name || form.coinId,
           amount: Number(form.amount),
-          buyPrice: Number(form.buyPrice),
+          unitPrice: Number(form.buyPrice),
+          fee: Number(form.fee || 0),
         }),
       });
 
@@ -247,17 +280,31 @@ export default function CarteiraPage() {
       }
 
       const created = (await response.json()) as PortfolioItem;
-      setPortfolio((prev) => [created, ...prev]);
-      setFeedback("Ativo adicionado com sucesso à sua carteira!");
+      setPortfolio((prev) => {
+        if (created.amount <= 0) {
+          return prev.filter((item) => item.id !== created.id);
+        }
+        const exists = prev.some((item) => item.id === created.id);
+        return exists
+          ? prev.map((item) => (item.id === created.id ? created : item))
+          : [created, ...prev];
+      });
+      setFeedback(
+        form.type === "BUY"
+          ? "Compra registrada com sucesso."
+          : "Venda registrada com sucesso."
+      );
       setForm((prev) => ({
         ...prev,
         amount: "",
+        fee: "0",
         buyPrice:
           selectedCoin && selectedCoin.current_price
             ? String(selectedCoin.current_price)
             : "",
         coinName: selectedCoin?.name ?? prev.coinName,
       }));
+      await loadTransactions();
     } catch (err) {
       console.error(err);
       setError(
@@ -268,18 +315,79 @@ export default function CarteiraPage() {
     }
   };
 
+  const loadTransactions = async () => {
+    const response = await fetch("/api/portifolio/transactions?pageSize=50");
+    if (!response.ok) return;
+    const data = await response.json();
+    setTransactions(Array.isArray(data?.items) ? data.items : []);
+  };
+
+  const startEditing = (item: PortfolioItem) => {
+    setEditing(item);
+    setEditForm({ amount: String(item.amount), buyPrice: String(item.buyPrice) });
+  };
+
+  const handleEdit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!editing) return;
+    setIsSubmitting(true);
+    setError(null);
+
+    const response = await fetch(`/api/portifolio/${editing.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        amount: Number(editForm.amount),
+        buyPrice: Number(editForm.buyPrice),
+      }),
+    });
+
+    if (response.ok) {
+      const updated = (await response.json()) as PortfolioItem;
+      setPortfolio((current) =>
+        current.map((item) => (item.id === updated.id ? updated : item))
+      );
+      setEditing(null);
+      setFeedback("Ativo atualizado.");
+      await loadTransactions();
+    } else {
+      const data = await response.json().catch(() => null);
+      setError(data?.error ?? "Não foi possível atualizar o ativo.");
+    }
+    setIsSubmitting(false);
+  };
+
+  const handleDelete = async (item: PortfolioItem) => {
+    if (!window.confirm(`Remover ${item.coinName} da carteira?`)) return;
+    const response = await fetch(`/api/portifolio/${item.id}`, {
+      method: "DELETE",
+    });
+    if (response.ok) {
+      setPortfolio((current) => current.filter((asset) => asset.id !== item.id));
+      setFeedback("Ativo removido.");
+      await loadTransactions();
+    } else {
+      setError("Não foi possível remover o ativo.");
+    }
+  };
+
   const handleRefresh = async () => {
     setIsFetching(true);
     setError(null);
     try {
-      const [portfolioRes, cryptoRes] = await Promise.all([
+      const [portfolioRes, cryptoRes, transactionsRes] = await Promise.all([
         fetch("/api/portifolio"),
         fetch("/api/cryptos"),
+        fetch("/api/portifolio/transactions?pageSize=50"),
       ]);
       const portfolioData = await portfolioRes.json();
       const cryptoData = await cryptoRes.json();
+      const transactionsData = await transactionsRes.json();
       setPortfolio(Array.isArray(portfolioData) ? portfolioData : []);
       setCryptos(Array.isArray(cryptoData) ? cryptoData : []);
+      setTransactions(
+        Array.isArray(transactionsData?.items) ? transactionsData.items : []
+      );
     } catch (err) {
       console.error(err);
       setError("Não foi possível atualizar os dados agora.");
@@ -293,10 +401,7 @@ export default function CarteiraPage() {
   }
 
   return (
-    <>
-      <Header userEmail={session?.user?.email || ""} cryptos={cryptos} />
-
-    <div className="flex w-full flex-col gap-10 px-6 py-8 lg:px-10">
+    <div className="flex w-full flex-col gap-10 px-4 py-6 lg:px-6">
 
       <section className="relative overflow-hidden rounded-3xl border border-emerald-100 bg-gradient-to-br from-emerald-500 via-emerald-600 to-emerald-400 text-white shadow-xl">
         <div className="absolute inset-y-0 right-[-25%] hidden w-2/3 bg-white/10 blur-3xl md:block" />
@@ -340,7 +445,7 @@ export default function CarteiraPage() {
       </section>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <Card className="gap-2 p-6">
           <p className="text-sm text-gray-500">Valor atual</p>
           <p className="mt-2 text-2xl font-semibold text-gray-900">
             {formatCurrency(totalCurrent)}
@@ -353,9 +458,9 @@ export default function CarteiraPage() {
             {totalProfit >= 0 ? "+" : ""}
             {totalProfitPercentage.toFixed(2)}%
           </p>
-        </div>
+        </Card>
 
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <Card className="gap-2 p-6">
           <p className="text-sm text-gray-500">
             Ativos monitorados
           </p>
@@ -365,9 +470,9 @@ export default function CarteiraPage() {
           <p className="mt-1 text-xs text-gray-500">
             Diversifique para mitigar riscos.
           </p>
-        </div>
+        </Card>
 
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <Card className="gap-2 p-6">
           <p className="text-sm text-gray-500">
             Maior rentabilidade
           </p>
@@ -390,9 +495,9 @@ export default function CarteiraPage() {
               Adicione ativos para descobrir destaques.
             </p>
           )}
-        </div>
+        </Card>
 
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <Card className="gap-2 p-6">
           <p className="text-sm text-gray-500">
             Maior retração
           </p>
@@ -415,18 +520,18 @@ export default function CarteiraPage() {
               Adicione ativos para acompanhar oscilações.
             </p>
           )}
-        </div>
+        </Card>
       </div>
 
       <section className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <Card className="gap-0 p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-xl font-semibold text-gray-900">
-                Adicionar novo ativo
+                Registrar movimentação
               </h2>
               <p className="text-sm text-gray-500">
-                Registre compras para acompanhar performance.
+                Compre ou venda ativos com preço e taxa da operação.
               </p>
             </div>
             <Button
@@ -451,35 +556,58 @@ export default function CarteiraPage() {
               </div>
             )}
 
+            <div className="grid grid-cols-2 rounded-xl bg-gray-100 p-1" role="group" aria-label="Tipo da movimentação">
+              {(["BUY", "SELL"] as const).map((type) => (
+                <ShadcnButton
+                  key={type}
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setForm((current) => ({ ...current, type }))}
+                  className={clsx(
+                    "min-h-11 rounded-lg px-4 text-sm font-semibold",
+                    form.type === type
+                      ? type === "BUY"
+                        ? "bg-white text-emerald-700 shadow-sm"
+                        : "bg-white text-red-700 shadow-sm"
+                      : "text-gray-500 hover:text-gray-800"
+                  )}
+                  aria-pressed={form.type === type}
+                >
+                  {type === "BUY" ? "Compra" : "Venda"}
+                </ShadcnButton>
+              ))}
+            </div>
+
             <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2">
               <label className="flex flex-col text-sm text-gray-700">
                 Ativo
-                <select
+                <Select
                   value={form.coinId}
-                  onChange={(event) =>
+                  onValueChange={(value) =>
                     setForm((prev) => ({
                       ...prev,
-                      coinId: event.target.value,
+                      coinId: value,
                       coinName:
                         cryptos.find(
-                          (coin) => coin.id === event.target.value
+                          (coin) => coin.id === value
                         )?.name ?? prev.coinName,
                     }))
                   }
-                  className="appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 pr-8 text-sm text-gray-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-emerald-500"
                 >
-                  <option value="">Selecione</option>
+                  <SelectTrigger className="mt-1 w-full"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>
                   {cryptos.map((coin) => (
-                    <option key={coin.id} value={coin.id}>
+                    <SelectItem key={coin.id} value={coin.id}>
                       {coin.name} ({coin.symbol.toUpperCase()})
-                    </option>
+                    </SelectItem>
                   ))}
-                </select>
+                  </SelectContent>
+                </Select>
               </label>
 
               <label className="flex flex-col text-sm text-gray-700">
                 Nome de exibição
-                <input
+                <Input
                   type="text"
                   value={form.coinName}
                   onChange={(event) =>
@@ -489,13 +617,13 @@ export default function CarteiraPage() {
                     }))
                   }
                   placeholder="Ex: Bitcoin"
-                  className="mt-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-emerald-500"
+                  className="mt-1"
                 />
               </label>
 
               <label className="flex flex-col text-sm text-gray-700">
                 Quantidade
-                <input
+                <Input
                   type="number"
                   min="0"
                   step="0.0001"
@@ -507,14 +635,14 @@ export default function CarteiraPage() {
                     }))
                   }
                   placeholder="0.00"
-                  className="mt-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-emerald-500"
+                  className="mt-1"
                   required
                 />
               </label>
 
               <label className="flex flex-col text-sm text-gray-700">
-                Preço pago (USD)
-                <input
+                {form.type === "BUY" ? "Preço pago" : "Preço de venda"} (USD)
+                <Input
                   type="number"
                   min="0"
                   step="0.01"
@@ -526,8 +654,23 @@ export default function CarteiraPage() {
                     }))
                   }
                   placeholder="0.00"
-                  className="mt-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-emerald-500"
+                  className="mt-1"
                   required
+                />
+              </label>
+
+              <label className="flex flex-col text-sm text-gray-700">
+                Taxa (USD)
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.fee}
+                  onChange={(event) =>
+                    setForm((prev) => ({ ...prev, fee: event.target.value }))
+                  }
+                  placeholder="0.00"
+                  className="mt-1 min-h-11"
                 />
               </label>
 
@@ -539,14 +682,14 @@ export default function CarteiraPage() {
                   disabled={isSubmitting}
                   className="sm:w-auto"
                 >
-                  Salvar ativo
+                  Registrar {form.type === "BUY" ? "compra" : "venda"}
                 </Button>
               </div>
             </form>
           </div>
-        </div>
+        </Card>
 
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <Card className="gap-0 p-6">
           <h2 className="text-xl font-semibold text-gray-900">
             Distribuição da carteira
           </h2>
@@ -572,22 +715,15 @@ export default function CarteiraPage() {
                     </span>
                     <span>{item.percentage.toFixed(1)}%</span>
                   </div>
-                  <div className="mt-2 h-2 w-full rounded-full bg-gray-100">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-green-500"
-                      style={{
-                        width: `${Math.max(item.percentage, 3)}%`,
-                      }}
-                    />
-                  </div>
+                  <Progress value={Math.max(item.percentage, 3)} className="mt-2" />
                 </li>
               ))}
             </ul>
           )}
-        </div>
+        </Card>
       </section>
 
-      <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm overflow-hidden">
+      <Card className="gap-0 overflow-hidden p-6">
         <div className="mb-6">
           <h2 className="text-xl font-semibold text-gray-900">
             Detalhes da carteira
@@ -597,7 +733,7 @@ export default function CarteiraPage() {
           </p>
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 text-sm">
+          <Table className="min-w-full divide-y divide-gray-200 text-sm">
             <thead className="bg-gray-50 text-gray-500">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase">
@@ -624,13 +760,16 @@ export default function CarteiraPage() {
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase">
                   Registrado em
                 </th>
+                <th className="px-4 py-3 text-right text-xs font-semibold uppercase">
+                  Ações
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-gray-700">
               {enrichedPortfolio.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={9}
                     className="px-4 py-8 text-center text-sm text-gray-500"
                   >
                     Sua carteira está vazia. Adicione um novo ativo para começar.
@@ -712,14 +851,123 @@ export default function CarteiraPage() {
                         year: "numeric",
                       }).format(new Date(asset.createdAt))}
                     </td>
+                    <td className="px-4 py-4">
+                      <div className="flex justify-end gap-2">
+                        <ShadcnButton
+                          type="button"
+                          variant="ghost"
+                          size="icon-lg"
+                          onClick={() => startEditing(asset)}
+                          className="text-gray-500"
+                          aria-label={`Editar ${asset.coinName}`}
+                        >
+                          <PencilSquareIcon className="h-5 w-5" />
+                        </ShadcnButton>
+                        <ShadcnButton
+                          type="button"
+                          variant="ghost"
+                          size="icon-lg"
+                          onClick={() => void handleDelete(asset)}
+                          className="text-red-500 hover:bg-red-50 hover:text-red-600"
+                          aria-label={`Remover ${asset.coinName}`}
+                        >
+                          <TrashIcon className="h-5 w-5" />
+                        </ShadcnButton>
+                      </div>
+                    </td>
                   </tr>
                 ))
               )}
             </tbody>
-          </table>
+          </Table>
         </div>
-      </section>
+      </Card>
+
+      <Card className="gap-0 p-6">
+        <div className="mb-5">
+          <h2 className="text-xl font-semibold text-gray-900">Movimentações</h2>
+          <p className="text-sm text-gray-500">
+            Compras, vendas, correções, taxas e lucro realizado.
+          </p>
+        </div>
+        <div className="overflow-x-auto">
+          <Table className="min-w-full divide-y divide-gray-200 text-sm">
+            <thead className="bg-gray-50 text-xs font-semibold uppercase text-gray-500">
+              <tr>
+                <th className="px-4 py-3 text-left">Data</th>
+                <th className="px-4 py-3 text-left">Ativo</th>
+                <th className="px-4 py-3 text-left">Tipo</th>
+                <th className="px-4 py-3 text-right">Quantidade</th>
+                <th className="px-4 py-3 text-right">Preço</th>
+                <th className="px-4 py-3 text-right">Taxa</th>
+                <th className="px-4 py-3 text-right">Lucro realizado</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {transactions.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-10 text-center text-gray-500">
+                    Nenhuma movimentação registrada.
+                  </td>
+                </tr>
+              ) : (
+                transactions.map((transaction) => (
+                  <tr key={transaction.id}>
+                    <td className="whitespace-nowrap px-4 py-3 text-gray-500">
+                      {new Date(transaction.occurredAt).toLocaleDateString("pt-BR")}
+                    </td>
+                    <td className="px-4 py-3 font-medium text-gray-900">
+                      {transaction.coinName}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={clsx(
+                        "rounded-full px-2.5 py-1 text-xs font-semibold",
+                        transaction.type === "BUY" && "bg-emerald-100 text-emerald-700",
+                        transaction.type === "SELL" && "bg-red-100 text-red-700",
+                        transaction.type === "ADJUSTMENT" && "bg-gray-100 text-gray-700"
+                      )}>
+                        {transaction.type === "BUY" ? "Compra" : transaction.type === "SELL" ? "Venda" : "Ajuste"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right tabular-nums">{formatNumber(transaction.amount)}</td>
+                    <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(transaction.unitPrice)}</td>
+                    <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(transaction.fee)}</td>
+                    <td className={clsx(
+                      "px-4 py-3 text-right font-medium tabular-nums",
+                      transaction.realizedProfit >= 0 ? "text-emerald-700" : "text-red-700"
+                    )}>
+                      {formatCurrency(transaction.realizedProfit)}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </Table>
+        </div>
+      </Card>
+
+      <Dialog open={Boolean(editing)} onOpenChange={(open) => !open && setEditing(null)}>
+        <DialogContent>
+          {editing && <form onSubmit={handleEdit} className="space-y-5">
+            <DialogHeader>
+              <DialogTitle>Editar {editing.coinName}</DialogTitle>
+              <DialogDescription>A correção ficará registrada no histórico.</DialogDescription>
+            </DialogHeader>
+            <label className="block text-sm font-medium text-gray-700">
+              Quantidade
+              <Input type="number" min="0" step="0.00000001" required value={editForm.amount} onChange={(event) => setEditForm((current) => ({ ...current, amount: event.target.value }))} className="mt-1 min-h-11" />
+            </label>
+            <label className="block text-sm font-medium text-gray-700">
+              Preço médio (USD)
+              <Input type="number" min="0" step="0.01" required value={editForm.buyPrice} onChange={(event) => setEditForm((current) => ({ ...current, buyPrice: event.target.value }))} className="mt-1 min-h-11" />
+            </label>
+            <div className="flex justify-end gap-3">
+              <Button type="button" variant="ghost" className="w-auto" onClick={() => setEditing(null)}>Cancelar</Button>
+              <Button type="submit" variant="secondary" className="w-auto" loading={isSubmitting}>Salvar</Button>
+            </div>
+          </form>}
+        </DialogContent>
+      </Dialog>
     </div>
-    </>
   );
 }

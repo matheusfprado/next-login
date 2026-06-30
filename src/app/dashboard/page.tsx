@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import Header from "./components/Header";
 import CryptoChart from "./components/CryptoChart";
 import CryptoTable from "./components/CryptoTable";
 import CryptoNews from "./components/CryptoNews";
@@ -19,6 +18,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { DashboardCrypto } from "./types";
 import { useCurrency } from "@/src/contexts/CurrencyContext";
+import { Card, CardContent } from "@/src/components/ui/card";
 
 type AlertStatus = "ACTIVE" | "TRIGGERED" | "DISABLED";
 
@@ -53,9 +53,9 @@ interface GoalSummary {
 }
 
 export default function DashboardPage() {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
-  const { currency, exchangeRate, setExchangeRate, formatCurrency } = useCurrency();
+  const { currency, exchangeRate, formatCurrency } = useCurrency();
 
   const [cryptos, setCryptos] = useState<DashboardCrypto[]>([]);
   const [, setLoading] = useState(true);
@@ -102,24 +102,6 @@ export default function DashboardPage() {
         console.error("Erro ao carregar criptomoedas:", error);
       }
 
-      try {
-        const rateRes = await fetchWithTimeout(
-          "https://api.exchangerate.host/latest?base=USD&symbols=BRL",
-          4_000
-        );
-
-        if (rateRes.ok) {
-          const jsonRate = await rateRes.json();
-          if (jsonRate?.rates?.BRL && isMounted) {
-            setExchangeRate(jsonRate.rates.BRL);
-            if (typeof window !== "undefined") {
-              window.localStorage.setItem("exchangeRate", jsonRate.rates.BRL);
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Erro ao carregar cotação BRL:", error);
-      }
     };
 
     const loadUserData = async () => {
@@ -185,7 +167,7 @@ export default function DashboardPage() {
       isMounted = false;
       clearInterval(interval);
     };
-  }, [status, router, setExchangeRate]);
+  }, [status, router]);
 
   const cryptoMap = useMemo(() => {
     const map = new Map<string, DashboardCrypto>();
@@ -315,15 +297,14 @@ export default function DashboardPage() {
   if (status === "unauthenticated") return null;
 
   return (
-    <>
-      <Header userEmail={session?.user?.email || ""} cryptos={cryptos} />
-      <div className="flex w-full flex-col gap-8 px-6 py-8 lg:px-8">
+    <div className="flex w-full flex-col gap-8 px-4 py-6 lg:px-6">
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {summaryCards.map((card) => (
-            <div
+            <Card
               key={card.title}
-              className="space-y-4 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
+              className="gap-0 bg-gradient-to-t from-primary/5 to-card py-0 shadow-xs"
             >
+              <CardContent className="space-y-4 p-5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
@@ -363,17 +344,19 @@ export default function DashboardPage() {
                   </p>
                 )}
               </div>
-                {"badge" in card && card.badge && (
+              {"badge" in card && card.badge && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-600">
                   {card.badge}
                 </span>
               )}
-            </div>
+              </CardContent>
+            </Card>
           ))}
         </section>
 
         <section className="grid gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,0.9fr)]">
-          <div className="space-y-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          <Card className="gap-0">
+            <CardContent className="space-y-6">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">
@@ -386,7 +369,7 @@ export default function DashboardPage() {
             </div>
             <CryptoChart
               cryptos={cryptos}
-              exchangeRate={currency === "BRL" ? exchangeRate : 1}
+              exchangeRate={exchangeRate}
             />
             <div className="grid gap-4 sm:grid-cols-2">
               {bestPerformer && (
@@ -422,22 +405,30 @@ export default function DashboardPage() {
                 </div>
               )}
             </div>
-          </div>
-          <div className="space-y-4 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+            </CardContent>
+          </Card>
+          <Card className="self-start gap-0">
+            <CardContent className="space-y-5">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">
-                Top 10 criptomoedas
-              </h3>
-              <p className="text-xs text-gray-500">
-                Valores em {currency === "BRL" ? "BRL" : "USD"}
-              </p>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Top 10 criptomoedas
+                </h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  Ranking por valor de mercado
+                </p>
+              </div>
+              <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600">
+                {currency}
+              </span>
             </div>
             <CryptoTable
               cryptos={cryptos}
-              exchangeRate={currency === "BRL" ? exchangeRate : 1}
+              exchangeRate={exchangeRate}
               loading={false}
             />
-          </div>
+            </CardContent>
+          </Card>
         </section>
 
         <section className="grid gap-6 xl:grid-cols-2">
@@ -450,8 +441,7 @@ export default function DashboardPage() {
         </section>
 
         <CryptoNews />
-      </div>
-    </>
+    </div>
   );
 }
 

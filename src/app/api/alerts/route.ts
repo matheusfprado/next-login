@@ -13,6 +13,10 @@ const alertSchema = z.object({
   deliveryMethod: z.enum(["EMAIL", "SMS"]).default("EMAIL"),
 });
 
+function serializeAlert<T extends { targetPrice: unknown }>(alert: T) {
+  return { ...alert, targetPrice: Number(alert.targetPrice) };
+}
+
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
@@ -24,7 +28,7 @@ export async function GET() {
     orderBy: { createdAt: "desc" },
   });
 
-  return NextResponse.json(alerts);
+  return NextResponse.json(alerts.map(serializeAlert));
 }
 
 export async function POST(req: Request) {
@@ -53,5 +57,5 @@ export async function POST(req: Request) {
     },
   });
 
-  return NextResponse.json(alert, { status: 201 });
+  return NextResponse.json(serializeAlert(alert), { status: 201 });
 }
