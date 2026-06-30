@@ -10,9 +10,10 @@ import {
   sendEmailChangeVerificationEmail,
 } from "@/src/modules/auth/auth-emails.service";
 import { createEmailVerificationToken } from "@/src/modules/auth/tokens.service";
+import { profileAvatarUrl } from "@/src/modules/auth/avatar";
 
 const profileSchema = z.object({
-  name: z.string().min(1, "Informe um nome.").max(120, "Nome muito grande."),
+  name: z.string().trim().min(1, "Informe um nome.").max(120, "Nome muito grande."),
   email: z.string().trim().toLowerCase().email("E-mail inválido."),
   currentPassword: z.string().min(1).optional(),
   phone: z
@@ -37,6 +38,10 @@ export async function GET() {
       name: true,
       email: true,
       phone: true,
+      avatar: true,
+      emailVerified: true,
+      createdAt: true,
+      updatedAt: true,
     },
   });
 
@@ -44,7 +49,11 @@ export async function GET() {
     return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 });
   }
 
-  return NextResponse.json(user);
+  return NextResponse.json({
+    ...user,
+    emailVerified: Boolean(user.emailVerified),
+    avatar: user.avatar ? profileAvatarUrl(user.updatedAt) : null,
+  });
 }
 
 export async function PATCH(request: Request) {
@@ -60,7 +69,7 @@ export async function PATCH(request: Request) {
     return NextResponse.json(
       {
         error: "Dados inválidos",
-        issues: parsed.error.flatten().fieldErrors,
+        fieldErrors: parsed.error.flatten().fieldErrors,
       },
       { status: 400 }
     );

@@ -6,13 +6,15 @@ import { useRouter } from "next/navigation";
 import Loading from "../../components/Loading";
 import {
   BellAlertIcon,
+  ArrowPathIcon,
+  CheckIcon,
   EnvelopeIcon,
   DevicePhoneMobileIcon,
   GlobeAltIcon,
   LanguageIcon,
   ChartBarIcon,
 } from "@heroicons/react/24/outline";
-import { Button } from "../../components/Button";
+import { Button } from "@/src/components/ui/button";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
 import { Switch } from "@/src/components/ui/switch";
@@ -92,21 +94,21 @@ export default function ConfiguracoesPage() {
         title: "Alertas por e-mail",
         description: "Receba atualizações e alertas importantes diretamente no seu e-mail.",
         value: toggles.emailAlerts,
-        icon: <EnvelopeIcon className="h-5 w-5 text-emerald-500" />,
+        icon: <EnvelopeIcon className="size-5 text-primary" />,
       },
       {
         id: "smsAlerts",
         title: "Alertas por SMS",
         description: "Seja avisado por SMS quando um alerta de preço for atingido.",
         value: toggles.smsAlerts,
-        icon: <DevicePhoneMobileIcon className="h-5 w-5 text-emerald-500" />,
+        icon: <DevicePhoneMobileIcon className="size-5 text-primary" />,
       },
       {
         id: "weeklySummary",
         title: "Resumo semanal",
         description: "Receba um resumo semanal com insights e desempenho da carteira.",
         value: toggles.weeklySummary,
-        icon: <ChartBarIcon className="h-5 w-5 text-emerald-500" />,
+        icon: <ChartBarIcon className="size-5 text-primary" />,
       },
     ],
     [toggles]
@@ -120,7 +122,7 @@ export default function ConfiguracoesPage() {
         description: "Selecione a língua padrão que será utilizada na interface.",
         value: selects.language,
         options: ["Português (Brasil)", "Inglês (EUA)", "Espanhol", "Francês"],
-        icon: <LanguageIcon className="h-5 w-5 text-emerald-500" />,
+        icon: <LanguageIcon className="size-5 text-primary" />,
       },
       {
         id: "currency",
@@ -128,7 +130,7 @@ export default function ConfiguracoesPage() {
         description: "Defina a moeda utilizada para conversões e relatórios.",
         value: selects.currency,
         options: ["Real (BRL)", "Dólar americano (USD)", "Euro (EUR)", "Libra (GBP)"],
-        icon: <GlobeAltIcon className="h-5 w-5 text-emerald-500" />,
+        icon: <GlobeAltIcon className="size-5 text-primary" />,
       },
       {
         id: "dashboardDensity",
@@ -136,7 +138,7 @@ export default function ConfiguracoesPage() {
         description: "Controle o espaçamento e a visualização dos cards do dashboard.",
         value: selects.dashboardDensity,
         options: ["Confortável", "Compacto", "Espaçoso"],
-        icon: <BellAlertIcon className="h-5 w-5 text-emerald-500" />,
+        icon: <BellAlertIcon className="size-5 text-primary" />,
       },
     ],
     [selects]
@@ -148,6 +150,19 @@ export default function ConfiguracoesPage() {
 
   const handleSelect = (id: string, value: string) => {
     setSelects((prev) => ({ ...prev, [id]: value }));
+  };
+
+  const handleReset = () => {
+    setToggles({
+      emailAlerts: true,
+      smsAlerts: false,
+      weeklySummary: true,
+    });
+    setSelects({
+      language: "Português (Brasil)",
+      currency: "Real (BRL)",
+      dashboardDensity: "Confortável",
+    });
   };
 
   const handleSave = async () => {
@@ -209,82 +224,103 @@ export default function ConfiguracoesPage() {
           <Loading fullScreen={false} label="Preparando suas preferências..." />
         </div>
       ) : (
-        <div className="flex w-full flex-col gap-8 px-4 py-6 lg:px-6">
-        <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-card">
-          <CardContent>
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex w-full flex-col gap-6 px-4 py-6 lg:px-6 lg:py-8">
+        <Card className="relative overflow-hidden border-primary/20 bg-gradient-to-br from-primary/10 via-card to-card shadow-sm">
+          <div className="pointer-events-none absolute -right-16 -top-20 size-56 rounded-full bg-primary/10 blur-3xl" />
+          <CardContent className="relative py-2">
+          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
             <div>
-              <p className="text-sm uppercase tracking-widest text-emerald-500">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
                 Preferências
               </p>
-              <h1 className="mt-2 text-3xl font-semibold text-gray-900">
+              <h1 className="mt-2 text-3xl font-semibold tracking-tight text-foreground">
                 Configurações da conta
               </h1>
-              <p className="mt-2 text-sm text-gray-500">
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
                 Personalize notificações, idioma e a experiência do dashboard.
               </p>
             </div>
-            <Button
-              variant="secondary"
-              className="md:w-auto"
-              loading={saving}
-              onClick={handleSave}
-            >
-              Aplicar configurações
-            </Button>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                className="min-h-11 rounded-xl bg-background/80"
+                disabled={saving}
+                onClick={handleReset}
+              >
+                <ArrowPathIcon aria-hidden="true" />
+                Restaurar padrão
+              </Button>
+              <Button
+                type="button"
+                size="lg"
+                className="min-h-11 rounded-xl shadow-sm shadow-primary/20"
+                disabled={saving}
+                aria-busy={saving}
+                onClick={handleSave}
+              >
+                {saving ? (
+                  <ArrowPathIcon className="animate-spin" aria-hidden="true" />
+                ) : (
+                  <CheckIcon aria-hidden="true" />
+                )}
+                {saving ? "Salvando..." : "Salvar alterações"}
+              </Button>
+            </div>
           </div>
           </CardContent>
         </Card>
 
-        <section className="grid gap-6 lg:grid-cols-2">
+        <section aria-label="Notificações" className="grid gap-4 lg:grid-cols-3">
           {toggleSettings.map((setting) => (
             <Card
               key={setting.id}
-              className="gap-0"
+              className="group gap-0 border-border/70 shadow-xs transition-colors duration-200 hover:border-primary/30"
             >
-              <CardContent className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+              <CardContent className="flex h-full items-start justify-between gap-4">
+              <div className="flex min-w-0 items-start gap-3">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary/15">
                   {setting.icon}
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-gray-900">
+                  <p className="text-sm font-semibold text-foreground">
                     {setting.title}
                   </p>
-                  <p className="text-xs text-gray-500">
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">
                     {setting.description}
                   </p>
                 </div>
               </div>
-              <Switch checked={setting.value} onCheckedChange={(checked) => handleToggle(setting.id, checked)} aria-label={setting.title} />
+              <Switch className="mt-1 shrink-0" checked={setting.value} onCheckedChange={(checked) => handleToggle(setting.id, checked)} aria-label={setting.title} />
               </CardContent>
             </Card>
           ))}
         </section>
 
-        <Card className="gap-0">
+        <Card className="gap-0 border-border/70 shadow-xs">
           <CardContent>
-          <h2 className="text-lg font-semibold text-gray-900">
+          <h2 className="text-lg font-semibold tracking-tight text-foreground">
             Preferências gerais
           </h2>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm leading-6 text-muted-foreground">
             Ajuste como as informações são apresentadas e em qual idioma são exibidas.
           </p>
           <div className="mt-6 grid gap-4 md:grid-cols-3">
             {selectSettings.map((setting) => (
               <label
                 key={setting.id}
-                className="flex flex-col gap-2 rounded-xl border border-gray-200 p-4"
+                className="flex flex-col gap-4 rounded-xl border border-border/70 bg-muted/20 p-4 transition-colors duration-200 focus-within:border-primary/50 focus-within:bg-primary/[0.03] hover:border-primary/30"
               >
-                <div className="flex items-center gap-2">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+                <div className="flex items-start gap-3">
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                     {setting.icon}
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-sm font-medium text-foreground">
                       {setting.title}
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
                       {setting.description}
                     </p>
                   </div>
@@ -293,7 +329,7 @@ export default function ConfiguracoesPage() {
                   value={setting.value}
                   onValueChange={(value) => handleSelect(setting.id, value)}
                 >
-                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-11 w-full bg-background"><SelectValue /></SelectTrigger>
                   <SelectContent>{setting.options.map((option) => <SelectItem key={option} value={option}>{option}</SelectItem>)}</SelectContent>
                 </Select>
               </label>

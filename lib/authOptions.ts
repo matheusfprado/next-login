@@ -6,6 +6,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 import { sendNewLoginEmail } from "@/src/modules/auth/auth-emails.service";
 import { consumeLoginOtp } from "@/src/modules/auth/login-otp.service";
+import { profileAvatarUrl } from "@/src/modules/auth/avatar";
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
@@ -39,6 +40,7 @@ export const authOptions: NextAuthOptions = {
           id: user.id,
           name: user.name ?? null,
           email: user.email,
+          image: user.avatar ? profileAvatarUrl(user.updatedAt) : null,
         };
       },
     }),
@@ -72,12 +74,29 @@ export const authOptions: NextAuthOptions = {
     },
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) token.id = user.id;
+
+      if (trigger === "update" && token.id) {
+        const currentUser = await prisma.user.findUnique({
+          where: { id: token.id },
+          select: { name: true, email: true, avatar: true, updatedAt: true },
+        });
+
+        if (currentUser) {
+          token.name = currentUser.name;
+          token.email = currentUser.email;
+          token.picture = currentUser.avatar
+            ? profileAvatarUrl(currentUser.updatedAt)
+            : null;
+        }
+      }
+
       return token;
     },
     async session({ session, token }) {
       if (token?.id) session.user.id = token.id as string;
+      session.user.image = token.picture ?? null;
       return session;
     },
   },

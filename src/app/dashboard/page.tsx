@@ -19,6 +19,7 @@ import {
 import { DashboardCrypto } from "./types";
 import { useCurrency } from "@/src/contexts/CurrencyContext";
 import { Card, CardContent } from "@/src/components/ui/card";
+import { Skeleton } from "@/src/components/ui/skeleton";
 
 type AlertStatus = "ACTIVE" | "TRIGGERED" | "DISABLED";
 
@@ -58,8 +59,7 @@ export default function DashboardPage() {
   const { currency, exchangeRate, formatCurrency } = useCurrency();
 
   const [cryptos, setCryptos] = useState<DashboardCrypto[]>([]);
-  const [, setLoading] = useState(true);
-  const [, setInitialLoad] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [portfolio, setPortfolio] = useState<PortfolioEntry[]>([]);
   const [alerts, setAlerts] = useState<AlertSummary[]>([]);
   const [goals, setGoals] = useState<GoalSummary[]>([]);
@@ -99,6 +99,7 @@ export default function DashboardPage() {
           );
         }
       } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
         console.error("Erro ao carregar criptomoedas:", error);
       }
 
@@ -153,7 +154,6 @@ export default function DashboardPage() {
       } finally {
         if (isMounted) {
           setLoading(false);
-          setInitialLoad(false);
         }
       }
     };
@@ -295,6 +295,7 @@ export default function DashboardPage() {
     ]
   );
   if (status === "unauthenticated") return null;
+  if (status === "loading" || loading) return <DashboardSkeleton />;
 
   return (
     <div className="flex w-full flex-col gap-8 px-4 py-6 lg:px-6">
@@ -441,6 +442,56 @@ export default function DashboardPage() {
         </section>
 
         <CryptoNews />
+    </div>
+  );
+}
+
+function DashboardSkeleton() {
+  return (
+    <div
+      className="flex w-full flex-col gap-8 px-4 py-6 lg:px-6"
+      role="status"
+      aria-label="Carregando dados do dashboard"
+      aria-busy="true"
+    >
+      <span className="sr-only">Carregando dados do dashboard...</span>
+
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {["portfolio", "resultado", "alertas", "metas"].map((card) => (
+          <Card key={card} className="gap-0 py-0 shadow-xs">
+            <CardContent className="space-y-4 p-5">
+              <div className="flex items-center gap-3">
+                <Skeleton className="size-10 rounded-full" />
+                <Skeleton className="h-4 w-28" />
+              </div>
+              <Skeleton className="h-8 w-36" />
+              <Skeleton className="h-3 w-44 max-w-full" />
+            </CardContent>
+          </Card>
+        ))}
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,0.9fr)]">
+        <Card className="gap-0">
+          <CardContent className="space-y-6">
+            <Skeleton className="h-6 w-72 max-w-full" />
+            <Skeleton className="h-[300px] w-full rounded-xl" />
+          </CardContent>
+        </Card>
+        <Card className="gap-0">
+          <CardContent className="space-y-5">
+            <Skeleton className="h-6 w-48" />
+            <Skeleton className="h-[380px] w-full rounded-xl" />
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-2">
+        <Skeleton className="h-72 w-full rounded-xl" />
+        <Skeleton className="h-72 w-full rounded-xl" />
+      </section>
+
+      <Skeleton className="h-80 w-full rounded-xl" />
     </div>
   );
 }

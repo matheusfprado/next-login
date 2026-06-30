@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card";
+import { Skeleton } from "@/src/components/ui/skeleton";
 
 interface NewsItem {
   title: string;
@@ -25,6 +26,7 @@ interface NewsResponseItem {
 
 export default function CryptoNews() {
   const [news, setNews] = useState<NewsItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchNews = async () => {
@@ -35,6 +37,8 @@ export default function CryptoNews() {
       } catch (error) {
         console.error("Erro ao buscar notícias:", error);
         setNews([]);
+      } finally {
+        setLoading(false);
       }
     };
     void fetchNews();
@@ -47,7 +51,18 @@ export default function CryptoNews() {
         <CardDescription>Atualizações recentes do mercado cripto.</CardDescription>
       </CardHeader>
       <CardContent>
-        {news.length === 0 ? (
+        {loading ? (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3" role="status" aria-label="Carregando notícias">
+            {["news-1", "news-2", "news-3"].map((item) => (
+              <div key={item} className="space-y-4 overflow-hidden rounded-xl border p-4">
+                <Skeleton className="h-40 w-full rounded-lg" />
+                <Skeleton className="h-5 w-full" />
+                <Skeleton className="h-4 w-2/3" />
+              </div>
+            ))}
+            <span className="sr-only">Carregando notícias...</span>
+          </div>
+        ) : news.length === 0 ? (
           <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">Nenhuma notícia encontrada</div>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

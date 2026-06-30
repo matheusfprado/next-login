@@ -1,25 +1,21 @@
 import type { AlertDirection } from "@prisma/client";
 
 import { sendEmail } from "@/lib/email";
-import { normalizePhone } from "@/lib/phone";
 import { prisma } from "@/lib/prisma";
-import { twilioClient } from "@/lib/twilio";
 import { getCachedCoinPrice } from "@/src/modules/crypto/crypto-cache.service";
+import { fetchTopCryptoMarkets } from "@/src/modules/crypto/coingecko.service";
 
-const messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
-
-export async function processPriceAlerts() {
+export async function processPriceAlerts(userId?: string) {
   const alerts = await prisma.priceAlert.findMany({
-    where: { status: "ACTIVE" },
+    where: { status: "ACTIVE", ...(userId ? { userId } : {}) },
     include: {
       user: {
         select: {
           email: true,
-          phone: true,
+          emailVerified: true,
           preferences: {
             select: {
               emailAlerts: true,
-              smsAlerts: true,
             },
           },
         },
@@ -27,41 +23,37 @@ export async function processPriceAlerts() {
     },
   });
 
+  const prices = await loadCurrentPrices(alerts.map((alert) => alert.coinId));
   const triggeredAlerts: Array<{ id: string; price: number }> = [];
+  let failed = 0;
 
   for (const alert of alerts) {
-    const deliveryEnabled =
-      alert.deliveryMethod === "EMAIL"
-        ? alert.user.preferences?.emailAlerts ?? true
-        : alert.user.preferences?.smsAlerts ?? false;
-    if (!deliveryEnabled) continue;
+    if (
+      alert.deliveryMethod !== "EMAIL" ||
+      !alert.user.email ||
+      !alert.user.emailVerified ||
+      alert.user.preferences?.emailAlerts === false
+    ) continue;
 
-    const currentPrice = await getCachedCoinPrice(alert.coinId);
-
+    const currentPrice = prices.get(alert.coinId) ?? null;
     if (currentPrice === null) continue;
     if (!isAlertTriggered(alert.direction, currentPrice, Number(alert.targetPrice))) continue;
 
     try {
-      if (alert.deliveryMethod === "EMAIL" && alert.user.email) {
-        await sendEmail({
-          to: alert.user.email,
-          subject: `Alerta InvestHub: ${alert.coinName}`,
-          text: `O preço de ${alert.coinName} atingiu ${currentPrice} USD.`,
-        });
-        triggeredAlerts.push({ id: alert.id, price: currentPrice });
-      } else if (
-        alert.deliveryMethod === "SMS" &&
-        alert.user.phone &&
-        messagingServiceSid
-      ) {
-        await twilioClient.messages.create({
-          messagingServiceSid,
-          to: normalizePhone(alert.user.phone),
-          body: `InvestHub: ${alert.coinName} chegou a ${currentPrice} USD.`,
-        });
-        triggeredAlerts.push({ id: alert.id, price: currentPrice });
-      }
+      const direction = alert.direction === "ABOVE" ? "atingiu ou superou" : "atingiu ou ficou abaixo de";
+      await sendEmail({
+        to: alert.user.email,
+        subject: `Alerta de preço: ${alert.coinName}`,
+        text: [
+          `${alert.coinName} ${direction} o valor definido.`,
+          `Preço atual: ${currentPrice} USD.`,
+          `Preço alvo: ${Number(alert.targetPrice)} USD.`,
+          "Acesse o InvestHub para acompanhar sua carteira.",
+        ].join("\n"),
+      });
+      triggeredAlerts.push({ id: alert.id, price: currentPrice });
     } catch (error) {
+      failed += 1;
       console.error(`[price-alert] alert=${alert.id} failed`, error);
     }
   }
@@ -79,7 +71,36 @@ export async function processPriceAlerts() {
   return {
     checked: alerts.length,
     triggered: triggeredAlerts.length,
+    triggeredAlerts,
+    failed,
   };
+}
+
+async function loadCurrentPrices(coinIds: string[]) {
+  const uniqueCoinIds = [...new Set(coinIds)];
+  const prices = new Map<string, number>();
+
+  await Promise.all(
+    uniqueCoinIds.map(async (coinId) => {
+      try {
+        const price = await getCachedCoinPrice(coinId);
+        if (price !== null) prices.set(coinId, price);
+      } catch {
+        // O fallback abaixo mantém a verificação disponível sem Redis.
+      }
+    })
+  );
+
+  if (prices.size < uniqueCoinIds.length) {
+    const markets = await fetchTopCryptoMarkets();
+    for (const market of markets) {
+      if (uniqueCoinIds.includes(market.id)) {
+        prices.set(market.id, market.current_price);
+      }
+    }
+  }
+
+  return prices;
 }
 
 function isAlertTriggered(

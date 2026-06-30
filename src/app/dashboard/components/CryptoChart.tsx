@@ -2,12 +2,10 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  ResponsiveContainer,
   AreaChart,
   Area,
   XAxis,
   YAxis,
-  Tooltip,
   CartesianGrid,
 } from "recharts";
 import clsx from "clsx";
@@ -19,6 +17,20 @@ import {
 import { DashboardCrypto } from "../types";
 import { useCurrency } from "@/src/contexts/CurrencyContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
+import { Skeleton } from "@/src/components/ui/skeleton";
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/src/components/ui/chart";
+
+const chartConfig = {
+  price: {
+    label: "Preço",
+    color: "var(--primary)",
+  },
+} satisfies ChartConfig;
 
 interface CryptoChartProps {
   cryptos: DashboardCrypto[];
@@ -177,28 +189,37 @@ export default function CryptoChart({
         </div>
       )}
       {historyLoading ? (
-        <div className="flex h-[220px] items-center justify-center text-sm text-gray-500">
-          Carregando histórico...
+        <div role="status" aria-label="Carregando histórico de preços">
+          <Skeleton className="h-[220px] w-full rounded-xl" />
+          <span className="sr-only">Carregando histórico de preços...</span>
         </div>
       ) : data.length === 0 ? (
         <div className="flex h-[220px] items-center justify-center text-center text-sm text-gray-500">
           O histórico será exibido após o worker registrar os primeiros preços.
         </div>
       ) : (
-      <ResponsiveContainer width="100%" height={220}>
-        <AreaChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+      <ChartContainer
+        config={chartConfig}
+        className="h-[220px] w-full aspect-auto"
+        aria-label={`Histórico de preço de ${coin?.name ?? "criptomoeda"} nos últimos 7 dias`}
+      >
+        <AreaChart
+          accessibilityLayer
+          data={data}
+          margin={{ top: 10, right: 12, left: 0, bottom: 0 }}
+        >
           <defs>
             <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#4ade80" stopOpacity={0.8} />
-              <stop offset="95%" stopColor="#4ade80" stopOpacity={0} />
+              <stop offset="5%" stopColor="var(--color-price)" stopOpacity={0.35} />
+              <stop offset="95%" stopColor="var(--color-price)" stopOpacity={0.02} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+          <CartesianGrid vertical={false} />
           <XAxis
             dataKey="time"
             axisLine={false}
             tickLine={false}
-            tick={{ fill: "#9ca3af", fontSize: 12 }}
+            tickMargin={8}
             tickFormatter={(value: string) =>
               new Date(value).toLocaleDateString("pt-BR", {
                 day: "2-digit",
@@ -209,28 +230,39 @@ export default function CryptoChart({
           <YAxis
             axisLine={false}
             tickLine={false}
-            tick={{ fill: "#9ca3af", fontSize: 12 }}
+            width={72}
             domain={["auto", "auto"]}
             tickFormatter={formatChartCurrency}
           />
-          <Tooltip
-            contentStyle={{ backgroundColor: "#1f2937", borderRadius: 8, border: "none" }}
-            itemStyle={{ color: "#f9fafb" }}
-            formatter={formatChartCurrency}
-            labelFormatter={(value) =>
-              new Date(String(value)).toLocaleString("pt-BR")
+          <ChartTooltip
+            cursor={false}
+            content={
+              <ChartTooltipContent
+                indicator="line"
+                labelFormatter={(value) =>
+                  new Date(String(value)).toLocaleString("pt-BR")
+                }
+                formatter={(value) => (
+                  <>
+                    <span className="text-muted-foreground">Preço</span>
+                    <span className="ml-auto font-mono font-medium tabular-nums">
+                      {formatChartCurrency(value)}
+                    </span>
+                  </>
+                )}
+              />
             }
           />
           <Area
             type="monotone"
             dataKey="price"
-            stroke="#4ade80"
+            stroke="var(--color-price)"
             fill="url(#colorPrice)"
-            strokeWidth={3}
-            animationDuration={1500}
+            strokeWidth={2.5}
+            animationDuration={300}
           />
         </AreaChart>
-      </ResponsiveContainer>
+      </ChartContainer>
       )}
     </div>
   );

@@ -1,6 +1,6 @@
 import Image from "next/image";
 
-import clsx from "clsx";
+import { clsx } from "clsx";
 
 interface BrandProps {
   compact?: boolean;

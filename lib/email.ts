@@ -24,6 +24,10 @@ export function getEmailTransport() {
   });
 }
 
+export function isEmailConfigured() {
+  return Boolean(EMAIL_HOST && EMAIL_PORT && EMAIL_USER && EMAIL_PASS);
+}
+
 interface SendEmailParams {
   to: string;
   subject: string;

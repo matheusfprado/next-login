@@ -34,3 +34,8 @@ next-env.d.ts
 
 # .eslintignore
 /src/generated/prisma/
+
+# local Codex configuration
+/.agents/
+/.codex/
+/AGENTS.md

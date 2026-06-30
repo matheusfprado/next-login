@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { z } from "zod";
 
 import { authOptions } from "@/lib/authOptions";
+import { isEmailConfigured } from "@/lib/email";
 import { prisma } from "@/lib/prisma";
 
 const alertSchema = z.object({
@@ -10,7 +11,7 @@ const alertSchema = z.object({
   coinName: z.string().min(1),
   targetPrice: z.number().positive(),
   direction: z.enum(["ABOVE", "BELOW"]).default("ABOVE"),
-  deliveryMethod: z.enum(["EMAIL", "SMS"]).default("EMAIL"),
+  deliveryMethod: z.literal("EMAIL").default("EMAIL"),
 });
 
 function serializeAlert<T extends { targetPrice: unknown }>(alert: T) {
@@ -43,6 +44,34 @@ export async function POST(req: Request) {
     return NextResponse.json(
       { error: "Dados inválidos", issues: parsed.error.flatten().fieldErrors },
       { status: 400 }
+    );
+  }
+
+  if (!isEmailConfigured()) {
+    return NextResponse.json(
+      { error: "O envio de e-mail ainda não está configurado no servidor." },
+      { status: 503 }
+    );
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: {
+      email: true,
+      emailVerified: true,
+      preferences: { select: { emailAlerts: true } },
+    },
+  });
+  if (!user?.email || !user.emailVerified) {
+    return NextResponse.json(
+      { error: "Confirme seu e-mail antes de criar alertas." },
+      { status: 422 }
+    );
+  }
+  if (user.preferences?.emailAlerts === false) {
+    return NextResponse.json(
+      { error: "Ative os alertas por e-mail nas configurações." },
+      { status: 409 }
     );
   }
 

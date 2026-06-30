@@ -35,7 +35,7 @@ export function Button({
       className={cn(
         "w-full rounded-xl",
         variant === "primary" && "bg-gray-950 text-white hover:bg-gray-800",
-        variant === "secondary" && "bg-primary text-primary-foreground hover:bg-primary/90",
+        variant === "secondary" && "bg-primary font-semibold text-white hover:bg-primary/90",
         className
       )}
     >

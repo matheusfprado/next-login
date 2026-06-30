@@ -1,4 +1,5 @@
 import type { CryptoMarket } from "@/src/modules/crypto/types";
+import { env } from "@/lib/env";
 
 const BINANCE_API_BASE = "https://api.binance.com";
 const TICKER_TIMEOUT_MS = 5_000;
@@ -40,6 +41,15 @@ type BinanceKline = [
 ];
 
 export async function fetchTopCryptoMarkets(): Promise<CryptoMarket[]> {
+  try {
+    return await fetchBinanceMarkets();
+  } catch (error) {
+    console.warn("Falha na Binance; usando CoinGecko:", error);
+    return fetchCoinGeckoMarkets();
+  }
+}
+
+async function fetchBinanceMarkets(): Promise<CryptoMarket[]> {
   const tickers = await fetchBinanceTickers();
 
   const markets = await Promise.all(
@@ -66,6 +76,30 @@ export async function fetchTopCryptoMarkets(): Promise<CryptoMarket[]> {
   );
 
   return markets.filter((market): market is CryptoMarket => market !== null);
+}
+
+async function fetchCoinGeckoMarkets(): Promise<CryptoMarket[]> {
+  const url = new URL(env.coinGeckoMarketsUrl());
+  url.searchParams.set("vs_currency", "usd");
+  url.searchParams.set("ids", TRACKED_MARKETS.map((market) => market.id).join(","));
+  url.searchParams.set("order", "market_cap_desc");
+  url.searchParams.set("sparkline", "true");
+  url.searchParams.set("price_change_percentage", "24h");
+
+  const response = await fetchWithTimeout(url, TICKER_TIMEOUT_MS, {
+    next: { revalidate: 30 },
+  });
+
+  if (!response.ok) {
+    throw new Error(`CoinGecko markets failed with status ${response.status}`);
+  }
+
+  const data: unknown = await response.json();
+  if (!Array.isArray(data)) return [];
+
+  return data
+    .map(toCryptoMarket)
+    .filter((market): market is CryptoMarket => market !== null);
 }
 
 async function fetchBinanceTickers() {
@@ -131,7 +165,52 @@ function isBinanceKline(value: unknown): value is BinanceKline {
   return Array.isArray(value) && typeof value[4] === "string";
 }
 
-function toFiniteNumber(value: string) {
+function toCryptoMarket(value: unknown): CryptoMarket | null {
+  if (!value || typeof value !== "object") return null;
+
+  const market = value as Record<string, unknown>;
+  const currentPrice = toFiniteNumber(market.current_price);
+
+  if (
+    typeof market.id !== "string" ||
+    typeof market.symbol !== "string" ||
+    typeof market.name !== "string" ||
+    typeof market.image !== "string" ||
+    currentPrice === undefined
+  ) {
+    return null;
+  }
+
+  const sparkline = market.sparkline_in_7d;
+  const prices =
+    sparkline && typeof sparkline === "object"
+      ? (sparkline as Record<string, unknown>).price
+      : undefined;
+
+  return {
+    id: market.id,
+    symbol: market.symbol,
+    name: market.name,
+    image: market.image,
+    current_price: currentPrice,
+    market_cap: toFiniteNumber(market.market_cap),
+    total_volume: toFiniteNumber(market.total_volume),
+    price_change_percentage_24h: toFiniteNumber(
+      market.price_change_percentage_24h
+    ),
+    sparkline_in_7d: {
+      price: Array.isArray(prices)
+        ? prices.flatMap((price) => {
+            const parsed = toFiniteNumber(price);
+            return parsed === undefined ? [] : [parsed];
+          })
+        : [],
+    },
+  };
+}
+
+function toFiniteNumber(value: unknown) {
+  if (typeof value !== "string" && typeof value !== "number") return undefined;
   const number = Number(value);
   return Number.isFinite(number) ? number : undefined;
 }

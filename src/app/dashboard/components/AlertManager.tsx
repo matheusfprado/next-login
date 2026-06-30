@@ -6,6 +6,7 @@ import {
   BellAlertIcon,
   CheckCircleIcon,
   ClockIcon,
+  EnvelopeIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
 import { Button } from "../../components/Button";
@@ -47,7 +48,10 @@ export function AlertManager({
 }: AlertManagerProps) {
   const [alerts, setAlerts] = useState<Alert[]>(initialAlerts ?? []);
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
   const [, setInitializing] = useState(!initialAlerts);
   const { formatCurrency } = useCurrency();
 
@@ -65,7 +69,6 @@ export function AlertManager({
     coinId: "",
     targetPrice: "",
     direction: "ABOVE" as AlertDirection,
-    deliveryMethod: "EMAIL" as AlertDelivery,
   });
 
   useEffect(() => {
@@ -123,26 +126,31 @@ export function AlertManager({
         coinName,
         targetPrice: Number(form.targetPrice),
         direction: form.direction,
-        deliveryMethod: form.deliveryMethod,
+        deliveryMethod: "EMAIL",
       }),
     });
 
     if (res.ok) {
       const data = await res.json();
       syncAlerts((prev) => [data, ...prev]);
-      setMessage("Alerta criado com sucesso!");
+      setMessage({ type: "success", text: "Alerta por e-mail criado com sucesso." });
       setForm((prev) => ({ ...prev, targetPrice: "" }));
     } else {
       const error = await res.json().catch(() => null);
-      setMessage(error?.error ?? "Erro ao criar alerta.");
+      setMessage({ type: "error", text: error?.error ?? "Erro ao criar alerta." });
     }
 
     setLoading(false);
   };
 
   const handleDelete = async (id: string) => {
-    await fetch(`/api/alerts/${id}`, { method: "DELETE" });
-    syncAlerts((prev) => prev.filter((alert) => alert.id !== id));
+    const response = await fetch(`/api/alerts/${id}`, { method: "DELETE" });
+    if (response.ok) {
+      syncAlerts((prev) => prev.filter((alert) => alert.id !== id));
+      setMessage({ type: "success", text: "Alerta removido." });
+      return;
+    }
+    setMessage({ type: "error", text: "Não foi possível remover o alerta." });
   };
 
   const handleCheckAlerts = async () => {
@@ -151,12 +159,13 @@ export function AlertManager({
     const res = await fetch("/api/alerts/check", { method: "POST" });
     if (res.ok) {
       const data = await res.json();
-      setMessage(
-        data.message ??
+      setMessage({
+        type: "success",
+        text: data.message ??
           (data.triggered?.length
             ? "Alertas verificados."
-            : "Nenhum alerta foi ativado.")
-      );
+            : "Nenhum alerta foi ativado."),
+      });
       if (Array.isArray(data.triggered) && data.triggered.length > 0) {
         const triggeredIds = new Set(
           data.triggered.map((item: { id: string }) => item.id)
@@ -170,7 +179,11 @@ export function AlertManager({
         );
       }
     } else {
-      setMessage("Não foi possível verificar os alertas.");
+      const data = await res.json().catch(() => null);
+      setMessage({
+        type: "error",
+        text: data?.error ?? "Não foi possível verificar os alertas.",
+      });
     }
     setLoading(false);
   };
@@ -188,7 +201,7 @@ export function AlertManager({
               Alertas de preço
             </h3>
             <p className="text-sm text-gray-500">
-              Seja avisado quando o mercado atingir os seus gatilhos.
+              Receba um e-mail quando o mercado atingir seus gatilhos.
             </p>
           </div>
         </div>
@@ -202,11 +215,16 @@ export function AlertManager({
         </Button>
       </div>
       {message && (
-        <p className="text-sm text-emerald-600">{message}</p>
+        <p
+          role={message.type === "error" ? "alert" : "status"}
+          className={message.type === "error" ? "text-sm text-destructive" : "text-sm text-emerald-600"}
+        >
+          {message.text}
+        </p>
       )}
       <form
         onSubmit={handleSubmit}
-        className="grid grid-cols-1 gap-4 md:grid-cols-5"
+        className="grid grid-cols-1 gap-4 md:grid-cols-4"
       >
         <label className="flex flex-col text-sm text-gray-700">
           Criptomoeda
@@ -254,19 +272,13 @@ export function AlertManager({
           </Select>
         </label>
 
-        <label className="flex flex-col text-sm text-gray-700">
+        <div className="flex flex-col text-sm text-gray-700">
           Entrega
-          <Select
-            value={form.deliveryMethod}
-            onValueChange={(value) => setForm((prev) => ({ ...prev, deliveryMethod: value as AlertDelivery }))}
-          >
-            <SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="EMAIL">E-mail</SelectItem>
-              <SelectItem value="SMS">SMS</SelectItem>
-            </SelectContent>
-          </Select>
-        </label>
+          <div className="mt-1 flex min-h-9 items-center gap-2 rounded-md border bg-muted/50 px-3 font-medium text-foreground">
+            <EnvelopeIcon className="size-4 text-primary" aria-hidden="true" />
+            E-mail
+          </div>
+        </div>
 
         <Button
           type="submit"
