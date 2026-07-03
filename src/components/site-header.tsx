@@ -21,7 +21,7 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center border-b bg-background/95 backdrop-blur">
       <div className="flex w-full items-center gap-2 px-4 lg:px-6">
-        <SidebarTrigger className="-ml-1" />
+        <SidebarTrigger className="-ml-1 size-11 md:size-9" />
         <Separator orientation="vertical" className="mx-2 h-4" />
         <h1 className="text-base font-semibold">{title}</h1>
         <label className="ml-auto flex items-center gap-2 text-sm text-muted-foreground">
@@ -29,7 +29,7 @@ export function SiteHeader() {
           <select
             value={currency}
             onChange={(event) => setCurrency(event.target.value as Currency)}
-            className="h-9 rounded-md border bg-background px-3 text-sm font-medium text-foreground shadow-xs outline-none focus:ring-2 focus:ring-ring/50"
+            className="h-11 rounded-md border bg-background px-3 text-base font-medium text-foreground shadow-xs outline-none focus:ring-2 focus:ring-ring/50 sm:text-sm md:h-9"
           >
             <option value="BRL">BRL</option>
             <option value="USD">USD</option>

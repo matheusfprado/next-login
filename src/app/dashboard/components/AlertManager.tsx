@@ -11,6 +11,10 @@ import {
 } from "@heroicons/react/24/outline";
 import { Button } from "../../components/Button";
 import { useCurrency } from "@/src/contexts/CurrencyContext";
+import {
+  formatCurrencyInput,
+  parseCurrencyInput,
+} from "@/src/modules/alerts/currency-input";
 import { Button as ShadcnButton } from "@/src/components/ui/button";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { Input } from "@/src/components/ui/input";
@@ -36,6 +40,7 @@ interface AlertManagerProps {
     id: string;
     name: string;
     symbol: string;
+    current_price: number;
   }[];
   initialAlerts?: Alert[];
   onAlertsChange?: (alerts: Alert[]) => void;
@@ -53,7 +58,7 @@ export function AlertManager({
     text: string;
   } | null>(null);
   const [, setInitializing] = useState(!initialAlerts);
-  const { formatCurrency } = useCurrency();
+  const { currency, exchangeRate, formatCurrency } = useCurrency();
 
   const coinOptions = useMemo(
     () =>
@@ -61,19 +66,34 @@ export function AlertManager({
         id: coin.id,
         name: coin.name,
         symbol: coin.symbol,
+        currentPrice: coin.current_price,
       })),
     [cryptos]
   );
 
   const [form, setForm] = useState({
     coinId: "",
-    targetPrice: "",
+    targetPriceUsd: "",
     direction: "ABOVE" as AlertDirection,
   });
 
+  const selectedCoin = useMemo(
+    () => coinOptions.find((coin) => coin.id === form.coinId),
+    [coinOptions, form.coinId]
+  );
+
+  const maskedTargetPrice = form.targetPriceUsd
+    ? formatCurrencyInput(Number(form.targetPriceUsd), currency, exchangeRate)
+    : "";
+
   useEffect(() => {
     if (coinOptions.length > 0 && !form.coinId) {
-      setForm((prev) => ({ ...prev, coinId: coinOptions[0].id }));
+      const firstCoin = coinOptions[0];
+      setForm((prev) => ({
+        ...prev,
+        coinId: firstCoin.id,
+        targetPriceUsd: String(firstCoin.currentPrice),
+      }));
     }
   }, [coinOptions, form.coinId]);
 
@@ -110,7 +130,7 @@ export function AlertManager({
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!form.coinId || !form.targetPrice) return;
+    if (!form.coinId || !form.targetPriceUsd) return;
 
     setLoading(true);
     setMessage(null);
@@ -124,7 +144,7 @@ export function AlertManager({
       body: JSON.stringify({
         coinId: form.coinId,
         coinName,
-        targetPrice: Number(form.targetPrice),
+        targetPrice: Number(form.targetPriceUsd),
         direction: form.direction,
         deliveryMethod: "EMAIL",
       }),
@@ -134,7 +154,12 @@ export function AlertManager({
       const data = await res.json();
       syncAlerts((prev) => [data, ...prev]);
       setMessage({ type: "success", text: "Alerta por e-mail criado com sucesso." });
-      setForm((prev) => ({ ...prev, targetPrice: "" }));
+      setForm((prev) => ({
+        ...prev,
+        targetPriceUsd: selectedCoin
+          ? String(selectedCoin.currentPrice)
+          : prev.targetPriceUsd,
+      }));
     } else {
       const error = await res.json().catch(() => null);
       setMessage({ type: "error", text: error?.error ?? "Erro ao criar alerta." });
@@ -230,9 +255,19 @@ export function AlertManager({
           Criptomoeda
           <Select
             value={form.coinId}
-            onValueChange={(value) => setForm((prev) => ({ ...prev, coinId: value }))}
+            onValueChange={(value) => {
+              const coin = coinOptions.find((option) => option.id === value);
+              setForm((prev) => ({
+                ...prev,
+                coinId: value,
+                targetPriceUsd: coin
+                  ? String(coin.currentPrice)
+                  : prev.targetPriceUsd,
+                direction: "ABOVE",
+              }));
+            }}
           >
-            <SelectTrigger className="mt-1 w-full"><SelectValue placeholder="Selecione" /></SelectTrigger>
+            <SelectTrigger className="mt-1 min-h-11 w-full"><SelectValue placeholder="Selecione" /></SelectTrigger>
             <SelectContent>
             {coinOptions.map((coin) => (
               <SelectItem key={coin.id} value={coin.id}>
@@ -244,37 +279,59 @@ export function AlertManager({
         </label>
 
         <label className="flex flex-col text-sm text-gray-700">
-          Preço alvo (USD)
+          Preço alvo ({currency})
           <Input
-            type="number"
-            step="0.01"
-            min="0"
-            className="mt-1"
-            value={form.targetPrice}
-            onChange={(event) =>
-              setForm((prev) => ({ ...prev, targetPrice: event.target.value }))
-            }
+            type="text"
+            inputMode="decimal"
+            className="mt-1 min-h-11 tabular-nums"
+            value={maskedTargetPrice}
+            onChange={(event) => {
+              const targetPriceUsd = parseCurrencyInput(
+                event.target.value,
+                exchangeRate
+              );
+              setForm((prev) => ({
+                ...prev,
+                targetPriceUsd:
+                  targetPriceUsd === null ? "" : String(targetPriceUsd),
+                direction:
+                  targetPriceUsd !== null &&
+                  selectedCoin &&
+                  targetPriceUsd < selectedCoin.currentPrice
+                    ? "BELOW"
+                    : "ABOVE",
+              }));
+            }}
+            aria-describedby="alert-current-price"
             required
           />
+          <span id="alert-current-price" className="mt-1 text-xs text-gray-500">
+            Atual: {selectedCoin ? formatCurrency(selectedCoin.currentPrice) : "—"}
+          </span>
         </label>
 
         <label className="flex flex-col text-sm text-gray-700">
-          Direção
+          Movimento esperado
           <Select
             value={form.direction}
             onValueChange={(value) => setForm((prev) => ({ ...prev, direction: value as AlertDirection }))}
           >
-            <SelectTrigger className="mt-1 w-full"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="mt-1 min-h-11 w-full"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="ABOVE">Preço &gt;= alvo</SelectItem>
-              <SelectItem value="BELOW">Preço &lt;= alvo</SelectItem>
+              <SelectItem value="ABOVE">Subir até o preço alvo</SelectItem>
+              <SelectItem value="BELOW">Cair até o preço alvo</SelectItem>
             </SelectContent>
           </Select>
+          <span className="mt-1 text-xs text-gray-500">
+            {form.direction === "ABOVE"
+              ? "Dispara quando o preço ficar igual ou acima do alvo."
+              : "Dispara quando o preço ficar igual ou abaixo do alvo."}
+          </span>
         </label>
 
         <div className="flex flex-col text-sm text-gray-700">
           Entrega
-          <div className="mt-1 flex min-h-9 items-center gap-2 rounded-md border bg-muted/50 px-3 font-medium text-foreground">
+          <div className="mt-1 flex min-h-11 items-center gap-2 rounded-md border bg-muted/50 px-3 font-medium text-foreground">
             <EnvelopeIcon className="size-4 text-primary" aria-hidden="true" />
             E-mail
           </div>
@@ -308,7 +365,7 @@ export function AlertManager({
                     {alert.coinName}
                   </h4>
                   <p className="text-sm text-gray-500">
-                    {alert.direction === "ABOVE" ? "Acima de" : "Abaixo de"}{" "}
+                    {alert.direction === "ABOVE" ? "Quando subir até" : "Quando cair até"}{" "}
                     {formatCurrency(alert.targetPrice)} •{" "}
                     {alert.deliveryMethod === "EMAIL" ? "E-mail" : "SMS"}
                   </p>
@@ -349,6 +406,3 @@ export function AlertManager({
     </Card>
   );
 }
-
-
-

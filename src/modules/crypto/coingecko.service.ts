@@ -40,6 +40,48 @@ type BinanceKline = [
   string
 ];
 
+export type TradeInterval = "15m" | "1h" | "4h" | "1d";
+
+export interface CryptoCandle {
+  timestamp: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+export async function fetchCryptoCandles(
+  coinId: string,
+  interval: TradeInterval,
+  limit: number
+): Promise<CryptoCandle[]> {
+  const market = TRACKED_MARKETS.find((item) => item.id === coinId);
+  if (!market) return [];
+
+  const url = new URL("/api/v3/klines", BINANCE_API_BASE);
+  url.searchParams.set("symbol", market.pair);
+  url.searchParams.set("interval", interval);
+  url.searchParams.set("limit", String(limit));
+
+  const response = await fetchWithTimeout(url, TICKER_TIMEOUT_MS, {
+    next: { revalidate: 30 },
+  });
+  if (!response.ok) throw new Error(`Binance klines failed with status ${response.status}`);
+
+  const data: unknown = await response.json();
+  if (!Array.isArray(data)) return [];
+
+  return data.filter(isBinanceKline).map((kline) => ({
+    timestamp: new Date(kline[0]).toISOString(),
+    open: Number(kline[1]),
+    high: Number(kline[2]),
+    low: Number(kline[3]),
+    close: Number(kline[4]),
+    volume: Number(kline[5]),
+  }));
+}
+
 export async function fetchTopCryptoMarkets(): Promise<CryptoMarket[]> {
   try {
     return await fetchBinanceMarkets();
@@ -162,7 +204,9 @@ function isBinanceTicker(value: unknown): value is BinanceTicker {
 }
 
 function isBinanceKline(value: unknown): value is BinanceKline {
-  return Array.isArray(value) && typeof value[4] === "string";
+  return Array.isArray(value) &&
+    typeof value[0] === "number" &&
+    value.slice(1, 6).every((item) => typeof item === "string");
 }
 
 function toCryptoMarket(value: unknown): CryptoMarket | null {

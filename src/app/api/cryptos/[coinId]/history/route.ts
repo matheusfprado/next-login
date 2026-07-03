@@ -2,10 +2,12 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { findCryptoPriceHistory } from "@/src/modules/crypto/crypto-history.repository";
+import { fetchCryptoCandles } from "@/src/modules/crypto/coingecko.service";
 
 const querySchema = z.object({
   range: z.enum(["24h", "7d", "30d", "90d"]).default("7d"),
   points: z.coerce.number().int().min(50).max(1000).default(300),
+  interval: z.enum(["15m", "1h", "4h", "1d"]).default("4h"),
 });
 
 const rangeHours = {
@@ -36,11 +38,20 @@ export async function GET(
     60,
     Math.ceil((hours * 60 * 60) / parsed.data.points)
   );
-  const points = await findCryptoPriceHistory({
-    coinId,
-    since,
-    bucketSeconds,
-  });
+  let points;
+  try {
+    const candles = await fetchCryptoCandles(
+      coinId,
+      parsed.data.interval,
+      Math.min(parsed.data.points, 300)
+    );
+    points = candles.map((candle) => ({
+      ...candle,
+      priceUsd: candle.close,
+    }));
+  } catch {
+    points = await findCryptoPriceHistory({ coinId, since, bucketSeconds });
+  }
 
   return NextResponse.json({ coinId, range: parsed.data.range, points });
 }

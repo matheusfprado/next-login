@@ -401,17 +401,17 @@ export default function CarteiraPage() {
   }
 
   return (
-    <div className="flex w-full flex-col gap-10 px-4 py-6 lg:px-6">
+    <div className="flex min-w-0 w-full flex-col gap-6 px-3 py-4 sm:gap-8 sm:px-4 sm:py-6 lg:px-6">
 
-      <section className="relative overflow-hidden rounded-3xl border border-emerald-100 bg-gradient-to-br from-emerald-500 via-emerald-600 to-emerald-400 text-white shadow-xl">
+      <section className="relative overflow-hidden rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-500 via-emerald-600 to-emerald-400 text-white shadow-xl sm:rounded-3xl">
         <div className="absolute inset-y-0 right-[-25%] hidden w-2/3 bg-white/10 blur-3xl md:block" />
-        <div className="relative flex flex-col gap-8 px-8 py-10 md:flex-row md:items-center md:justify-between">
+        <div className="relative flex flex-col gap-6 px-4 py-6 sm:px-8 sm:py-8 md:flex-row md:items-center md:justify-between lg:py-10">
           <div className="max-w-xl">
-            <span className="inline-flex items-center gap-2 rounded-full bg-white/20 px-4 py-1 text-xs font-medium uppercase tracking-widest">
+            <span className="inline-flex max-w-full items-center gap-2 rounded-full bg-white/20 px-3 py-1.5 text-xs font-medium uppercase leading-5 tracking-wider sm:px-4 sm:tracking-widest">
               <SparklesIcon className="h-4 w-4" />
               Nova experiência da carteira digital
             </span>
-            <h1 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">
+            <h1 className="mt-4 text-2xl font-bold tracking-tight sm:text-4xl">
               Uma visão profissional da sua carteira
             </h1>
             <p className="mt-3 text-sm text-emerald-50 sm:text-base">
@@ -419,16 +419,16 @@ export default function CarteiraPage() {
               interface moderna inspirada no shadcn/ui.
             </p>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid w-full gap-3 sm:grid-cols-2 md:w-auto md:min-w-80">
             <div className="rounded-2xl bg-white/15 p-4 text-sm backdrop-blur">
               <p className="text-emerald-100">Total investido</p>
-              <p className="mt-1 text-2xl font-semibold text-white">
+              <p className="mt-1 break-words text-xl font-semibold tabular-nums text-white sm:text-2xl">
                 {formatCurrency(totalInvested)}
               </p>
             </div>
             <div className="rounded-2xl bg-white/15 p-4 text-sm backdrop-blur">
               <p className="text-emerald-100">Resultado</p>
-              <p className="mt-1 text-2xl font-semibold text-white" aria-live="polite">
+              <p className="mt-1 break-words text-xl font-semibold tabular-nums text-white sm:text-2xl" aria-live="polite">
                 {formatCurrency(totalProfit)}{" "}
                 <span
                   className={clsx(
@@ -445,7 +445,7 @@ export default function CarteiraPage() {
       </section>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Card className="gap-2 p-6">
+        <Card className="gap-2 p-4 sm:p-6">
           <p className="text-sm text-gray-500">Valor atual</p>
           <p className="mt-2 text-2xl font-semibold text-gray-900">
             {formatCurrency(totalCurrent)}
@@ -460,7 +460,7 @@ export default function CarteiraPage() {
           </p>
         </Card>
 
-        <Card className="gap-2 p-6">
+        <Card className="gap-2 p-4 sm:p-6">
           <p className="text-sm text-gray-500">
             Ativos monitorados
           </p>
@@ -472,7 +472,7 @@ export default function CarteiraPage() {
           </p>
         </Card>
 
-        <Card className="gap-2 p-6">
+        <Card className="gap-2 p-4 sm:p-6">
           <p className="text-sm text-gray-500">
             Maior rentabilidade
           </p>
@@ -497,7 +497,7 @@ export default function CarteiraPage() {
           )}
         </Card>
 
-        <Card className="gap-2 p-6">
+        <Card className="gap-2 p-4 sm:p-6">
           <p className="text-sm text-gray-500">
             Maior retração
           </p>
@@ -524,7 +524,7 @@ export default function CarteiraPage() {
       </div>
 
       <section className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-        <Card className="gap-0 p-6">
+        <Card className="gap-0 p-4 sm:p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-xl font-semibold text-gray-900">
@@ -536,7 +536,7 @@ export default function CarteiraPage() {
             </div>
             <Button
               variant="ghost"
-              className="sm:w-auto text-sm"
+              className="min-h-11 text-sm sm:w-auto"
               onClick={handleRefresh}
               loading={isFetching}
             >
@@ -594,7 +594,7 @@ export default function CarteiraPage() {
                     }))
                   }
                 >
-                  <SelectTrigger className="mt-1 w-full"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectTrigger className="mt-1 min-h-11 w-full"><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent>
                   {cryptos.map((coin) => (
                     <SelectItem key={coin.id} value={coin.id}>
@@ -617,7 +617,7 @@ export default function CarteiraPage() {
                     }))
                   }
                   placeholder="Ex: Bitcoin"
-                  className="mt-1"
+                  className="mt-1 min-h-11"
                 />
               </label>
 
@@ -635,7 +635,7 @@ export default function CarteiraPage() {
                     }))
                   }
                   placeholder="0.00"
-                  className="mt-1"
+                  className="mt-1 min-h-11"
                   required
                 />
               </label>
@@ -654,7 +654,7 @@ export default function CarteiraPage() {
                     }))
                   }
                   placeholder="0.00"
-                  className="mt-1"
+                  className="mt-1 min-h-11"
                   required
                 />
               </label>
@@ -680,7 +680,7 @@ export default function CarteiraPage() {
                   variant="secondary"
                   loading={isSubmitting}
                   disabled={isSubmitting}
-                  className="sm:w-auto"
+                  className="min-h-11 sm:w-auto"
                 >
                   Registrar {form.type === "BUY" ? "compra" : "venda"}
                 </Button>
@@ -689,7 +689,7 @@ export default function CarteiraPage() {
           </div>
         </Card>
 
-        <Card className="gap-0 p-6">
+        <Card className="gap-0 p-4 sm:p-6">
           <h2 className="text-xl font-semibold text-gray-900">
             Distribuição da carteira
           </h2>
@@ -723,7 +723,7 @@ export default function CarteiraPage() {
         </Card>
       </section>
 
-      <Card className="gap-0 overflow-hidden p-6">
+      <Card className="gap-0 overflow-hidden p-4 sm:p-6">
         <div className="mb-6">
           <h2 className="text-xl font-semibold text-gray-900">
             Detalhes da carteira
@@ -732,8 +732,86 @@ export default function CarteiraPage() {
             Compare valores investidos e resultados atuais.
           </p>
         </div>
-        <div className="overflow-x-auto">
-          <Table className="min-w-full divide-y divide-gray-200 text-sm">
+        <div className="space-y-3 md:hidden">
+          {enrichedPortfolio.length === 0 ? (
+            <p className="rounded-xl border border-dashed px-4 py-8 text-center text-sm text-gray-500">
+              Sua carteira está vazia. Adicione um novo ativo para começar.
+            </p>
+          ) : (
+            enrichedPortfolio.map((asset) => (
+              <article key={asset.id} className="rounded-xl border border-gray-200 p-4">
+                <div className="flex min-w-0 items-start gap-3">
+                  {asset.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={asset.image}
+                      alt=""
+                      className="size-10 shrink-0 rounded-full border border-gray-200 object-cover"
+                    />
+                  ) : (
+                    <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 font-semibold text-emerald-600">
+                      {asset.coinName.slice(0, 1).toUpperCase()}
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <h3 className="truncate font-semibold text-gray-900">{asset.coinName}</h3>
+                    <p className="truncate text-xs uppercase text-gray-500">{asset.symbol ?? asset.coinId}</p>
+                  </div>
+                  <div className="flex shrink-0 gap-1">
+                    <ShadcnButton
+                      type="button"
+                      variant="ghost"
+                      size="icon-lg"
+                      onClick={() => startEditing(asset)}
+                      className="text-gray-500"
+                      aria-label={`Editar ${asset.coinName}`}
+                    >
+                      <PencilSquareIcon className="size-5" />
+                    </ShadcnButton>
+                    <ShadcnButton
+                      type="button"
+                      variant="ghost"
+                      size="icon-lg"
+                      onClick={() => void handleDelete(asset)}
+                      className="text-red-500 hover:bg-red-50 hover:text-red-600"
+                      aria-label={`Remover ${asset.coinName}`}
+                    >
+                      <TrashIcon className="size-5" />
+                    </ShadcnButton>
+                  </div>
+                </div>
+                <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                  <div>
+                    <dt className="text-xs text-gray-500">Valor atual</dt>
+                    <dd className="mt-0.5 break-words font-semibold tabular-nums text-gray-900">{formatCurrency(asset.currentValue)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-gray-500">Quantidade</dt>
+                    <dd className="mt-0.5 break-words tabular-nums text-gray-900">{formatNumber(asset.amount)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-gray-500">Preço pago</dt>
+                    <dd className="mt-0.5 break-words tabular-nums text-gray-900">{formatCurrency(asset.buyPrice)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-gray-500">24h</dt>
+                    <dd className={clsx("mt-0.5 font-medium tabular-nums", asset.dailyChange === undefined ? "text-gray-500" : asset.dailyChange >= 0 ? "text-emerald-700" : "text-red-700")}>
+                      {asset.dailyChange === undefined ? "—" : `${asset.dailyChange >= 0 ? "+" : ""}${asset.dailyChange.toFixed(2)}%`}
+                    </dd>
+                  </div>
+                  <div className="col-span-2">
+                    <dt className="text-xs text-gray-500">Resultado</dt>
+                    <dd className={clsx("mt-0.5 font-semibold tabular-nums", asset.profit >= 0 ? "text-emerald-700" : "text-red-700")}>
+                      {asset.profit >= 0 ? "+" : ""}{formatCurrency(asset.profit)} ({asset.profitPercentage.toFixed(1)}%)
+                    </dd>
+                  </div>
+                </dl>
+              </article>
+            ))
+          )}
+        </div>
+        <div className="hidden overflow-x-auto md:block">
+          <Table className="min-w-[900px] divide-y divide-gray-200 text-sm">
             <thead className="bg-gray-50 text-gray-500">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase">
@@ -883,15 +961,63 @@ export default function CarteiraPage() {
         </div>
       </Card>
 
-      <Card className="gap-0 p-6">
+      <Card className="gap-0 p-4 sm:p-6">
         <div className="mb-5">
           <h2 className="text-xl font-semibold text-gray-900">Movimentações</h2>
           <p className="text-sm text-gray-500">
             Compras, vendas, correções, taxas e lucro realizado.
           </p>
         </div>
-        <div className="overflow-x-auto">
-          <Table className="min-w-full divide-y divide-gray-200 text-sm">
+        <div className="space-y-3 md:hidden">
+          {transactions.length === 0 ? (
+            <p className="rounded-xl border border-dashed px-4 py-8 text-center text-sm text-gray-500">
+              Nenhuma movimentação registrada.
+            </p>
+          ) : (
+            transactions.map((transaction) => (
+              <article key={transaction.id} className="rounded-xl border border-gray-200 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="truncate font-semibold text-gray-900">{transaction.coinName}</h3>
+                    <p className="mt-1 text-xs text-gray-500">
+                      {new Date(transaction.occurredAt).toLocaleDateString("pt-BR")}
+                    </p>
+                  </div>
+                  <span className={clsx(
+                    "shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold",
+                    transaction.type === "BUY" && "bg-emerald-100 text-emerald-700",
+                    transaction.type === "SELL" && "bg-red-100 text-red-700",
+                    transaction.type === "ADJUSTMENT" && "bg-gray-100 text-gray-700"
+                  )}>
+                    {transaction.type === "BUY" ? "Compra" : transaction.type === "SELL" ? "Venda" : "Ajuste"}
+                  </span>
+                </div>
+                <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                  <div>
+                    <dt className="text-xs text-gray-500">Quantidade</dt>
+                    <dd className="mt-0.5 break-words tabular-nums text-gray-900">{formatNumber(transaction.amount)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-gray-500">Preço</dt>
+                    <dd className="mt-0.5 break-words tabular-nums text-gray-900">{formatCurrency(transaction.unitPrice)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-gray-500">Taxa</dt>
+                    <dd className="mt-0.5 break-words tabular-nums text-gray-900">{formatCurrency(transaction.fee)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-gray-500">Lucro realizado</dt>
+                    <dd className={clsx("mt-0.5 break-words font-medium tabular-nums", transaction.realizedProfit >= 0 ? "text-emerald-700" : "text-red-700")}>
+                      {formatCurrency(transaction.realizedProfit)}
+                    </dd>
+                  </div>
+                </dl>
+              </article>
+            ))
+          )}
+        </div>
+        <div className="hidden overflow-x-auto md:block">
+          <Table className="min-w-[760px] divide-y divide-gray-200 text-sm">
             <thead className="bg-gray-50 text-xs font-semibold uppercase text-gray-500">
               <tr>
                 <th className="px-4 py-3 text-left">Data</th>
@@ -947,7 +1073,7 @@ export default function CarteiraPage() {
       </Card>
 
       <Dialog open={Boolean(editing)} onOpenChange={(open) => !open && setEditing(null)}>
-        <DialogContent>
+        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto">
           {editing && <form onSubmit={handleEdit} className="space-y-5">
             <DialogHeader>
               <DialogTitle>Editar {editing.coinName}</DialogTitle>
@@ -961,9 +1087,9 @@ export default function CarteiraPage() {
               Preço médio (USD)
               <Input type="number" min="0" step="0.01" required value={editForm.buyPrice} onChange={(event) => setEditForm((current) => ({ ...current, buyPrice: event.target.value }))} className="mt-1 min-h-11" />
             </label>
-            <div className="flex justify-end gap-3">
-              <Button type="button" variant="ghost" className="w-auto" onClick={() => setEditing(null)}>Cancelar</Button>
-              <Button type="submit" variant="secondary" className="w-auto" loading={isSubmitting}>Salvar</Button>
+            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <Button type="button" variant="ghost" className="min-h-11 sm:w-auto" onClick={() => setEditing(null)}>Cancelar</Button>
+              <Button type="submit" variant="secondary" className="min-h-11 sm:w-auto" loading={isSubmitting}>Salvar</Button>
             </div>
           </form>}
         </DialogContent>
