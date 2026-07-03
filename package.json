@@ -15,6 +15,7 @@
     "worker:prices": "tsx src/workers/crypto-prices.worker.ts",
     "worker:alerts": "tsx src/workers/alerts.worker.ts",
     "worker:weekly-summary": "tsx src/workers/weekly-summary.worker.ts",
+    "worker:integrations": "tsx src/workers/integrations.worker.ts",
     "prisma:migrate": "prisma migrate deploy",
     "postinstall": "prisma generate"
   },

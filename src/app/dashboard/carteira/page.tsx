@@ -20,6 +20,11 @@ import { Progress } from "@/src/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
 import { Table } from "@/src/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/src/components/ui/dialog";
+import {
+  createUsdInvestmentMarket,
+  dollarInvestmentValues,
+  USD_INVESTMENT_ID,
+} from "@/src/modules/portfolio/investment-assets";
 
 interface PortfolioItem {
   id: string;
@@ -34,6 +39,7 @@ interface PortfolioItem {
 
 interface PortfolioTransaction {
   id: string;
+  coinId: string;
   coinName: string;
   type: "BUY" | "SELL" | "ADJUSTMENT";
   amount: number;
@@ -73,6 +79,7 @@ export default function CarteiraPage() {
   const { status } = useSession();
   const router = useRouter();
   const { formatCurrency } = useCurrency();
+  const [usdBrlRate, setUsdBrlRate] = useState(1);
 
   const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
   const [transactions, setTransactions] = useState<PortfolioTransaction[]>([]);
@@ -107,10 +114,11 @@ export default function CarteiraPage() {
       setError(null);
 
       try {
-        const [portfolioRes, cryptoRes, transactionsRes] = await Promise.all([
+        const [portfolioRes, cryptoRes, transactionsRes, rateRes] = await Promise.all([
           fetch("/api/portifolio"),
           fetch("/api/cryptos"),
           fetch("/api/portifolio/transactions?pageSize=50"),
+          fetch("/api/exchange-rates?currency=BRL"),
         ]);
 
         if (portfolioRes.status === 401) {
@@ -121,9 +129,14 @@ export default function CarteiraPage() {
         const portfolioData = await portfolioRes.json();
         const cryptoData = await cryptoRes.json();
         const transactionsData = await transactionsRes.json();
+        const rateData: unknown = await rateRes.json();
+        const rate = rateData && typeof rateData === "object" && "rate" in rateData && typeof rateData.rate === "number"
+          ? rateData.rate
+          : 1;
 
         setPortfolio(Array.isArray(portfolioData) ? portfolioData : []);
-        setCryptos(Array.isArray(cryptoData) ? cryptoData : []);
+        setUsdBrlRate(rate);
+        setCryptos(Array.isArray(cryptoData) ? [...cryptoData, createUsdInvestmentMarket(rate)] : [createUsdInvestmentMarket(rate)]);
         setTransactions(
           Array.isArray(transactionsData?.items) ? transactionsData.items : []
         );
@@ -169,9 +182,13 @@ export default function CarteiraPage() {
   const enrichedPortfolio: EnrichedPortfolio[] = useMemo(() => {
     return portfolio.map((item) => {
       const marketData = cryptos.find((coin) => coin.id === item.coinId);
-      const currentPrice = Number(marketData?.current_price ?? item.buyPrice);
-      const investedValue = item.amount * item.buyPrice;
-      const currentValue = item.amount * currentPrice;
+      const isDollar = item.coinId === USD_INVESTMENT_ID;
+      const dollarValues = isDollar
+        ? dollarInvestmentValues(item.amount, item.buyPrice, usdBrlRate)
+        : null;
+      const currentPrice = isDollar ? 1 : Number(marketData?.current_price ?? item.buyPrice);
+      const investedValue = dollarValues?.investedUsd ?? item.amount * item.buyPrice;
+      const currentValue = dollarValues?.currentUsd ?? item.amount * currentPrice;
       const profit = currentValue - investedValue;
       const profitPercentage =
         investedValue > 0 ? (profit / investedValue) * 100 : 0;
@@ -188,7 +205,7 @@ export default function CarteiraPage() {
         symbol: marketData?.symbol?.toUpperCase(),
       };
     });
-  }, [portfolio, cryptos]);
+  }, [portfolio, cryptos, usdBrlRate]);
 
   const totalInvested = useMemo(
     () =>
@@ -211,6 +228,11 @@ export default function CarteiraPage() {
   const totalProfit = totalCurrent - totalInvested;
   const totalProfitPercentage =
     totalInvested > 0 ? (totalProfit / totalInvested) * 100 : 0;
+
+  const formatStoredPrice = (coinId: string, value: number) =>
+    coinId === USD_INVESTMENT_ID
+      ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value)
+      : formatCurrency(value);
 
   const allocation = useMemo(() => {
     if (!totalCurrent) return [];
@@ -375,16 +397,22 @@ export default function CarteiraPage() {
     setIsFetching(true);
     setError(null);
     try {
-      const [portfolioRes, cryptoRes, transactionsRes] = await Promise.all([
+      const [portfolioRes, cryptoRes, transactionsRes, rateRes] = await Promise.all([
         fetch("/api/portifolio"),
         fetch("/api/cryptos"),
         fetch("/api/portifolio/transactions?pageSize=50"),
+        fetch("/api/exchange-rates?currency=BRL"),
       ]);
       const portfolioData = await portfolioRes.json();
       const cryptoData = await cryptoRes.json();
       const transactionsData = await transactionsRes.json();
+      const rateData: unknown = await rateRes.json();
+      const rate = rateData && typeof rateData === "object" && "rate" in rateData && typeof rateData.rate === "number"
+        ? rateData.rate
+        : usdBrlRate;
       setPortfolio(Array.isArray(portfolioData) ? portfolioData : []);
-      setCryptos(Array.isArray(cryptoData) ? cryptoData : []);
+      setUsdBrlRate(rate);
+      setCryptos(Array.isArray(cryptoData) ? [...cryptoData, createUsdInvestmentMarket(rate)] : [createUsdInvestmentMarket(rate)]);
       setTransactions(
         Array.isArray(transactionsData?.items) ? transactionsData.items : []
       );
@@ -641,7 +669,7 @@ export default function CarteiraPage() {
               </label>
 
               <label className="flex flex-col text-sm text-gray-700">
-                {form.type === "BUY" ? "Preço pago" : "Preço de venda"} (USD)
+                {form.type === "BUY" ? "Preço pago" : "Preço de venda"} ({form.coinId === USD_INVESTMENT_ID ? "BRL por USD" : "USD"})
                 <Input
                   type="number"
                   min="0"
@@ -660,7 +688,7 @@ export default function CarteiraPage() {
               </label>
 
               <label className="flex flex-col text-sm text-gray-700">
-                Taxa (USD)
+                Taxa ({form.coinId === USD_INVESTMENT_ID ? "BRL" : "USD"})
                 <Input
                   type="number"
                   min="0"
@@ -791,7 +819,7 @@ export default function CarteiraPage() {
                   </div>
                   <div>
                     <dt className="text-xs text-gray-500">Preço pago</dt>
-                    <dd className="mt-0.5 break-words tabular-nums text-gray-900">{formatCurrency(asset.buyPrice)}</dd>
+                    <dd className="mt-0.5 break-words tabular-nums text-gray-900">{formatStoredPrice(asset.coinId, asset.buyPrice)}</dd>
                   </div>
                   <div>
                     <dt className="text-xs text-gray-500">24h</dt>
@@ -884,7 +912,7 @@ export default function CarteiraPage() {
                       </div>
                     </td>
                     <td className="px-4 py-4">{formatNumber(asset.amount)}</td>
-                    <td className="px-4 py-4">{formatCurrency(asset.buyPrice)}</td>
+                    <td className="px-4 py-4">{formatStoredPrice(asset.coinId, asset.buyPrice)}</td>
                     <td className="px-4 py-4">{formatCurrency(asset.currentPrice)}</td>
                     <td className="px-4 py-4 font-medium">
                       {formatCurrency(asset.currentValue)}
@@ -999,16 +1027,16 @@ export default function CarteiraPage() {
                   </div>
                   <div>
                     <dt className="text-xs text-gray-500">Preço</dt>
-                    <dd className="mt-0.5 break-words tabular-nums text-gray-900">{formatCurrency(transaction.unitPrice)}</dd>
+                    <dd className="mt-0.5 break-words tabular-nums text-gray-900">{formatStoredPrice(transaction.coinId, transaction.unitPrice)}</dd>
                   </div>
                   <div>
                     <dt className="text-xs text-gray-500">Taxa</dt>
-                    <dd className="mt-0.5 break-words tabular-nums text-gray-900">{formatCurrency(transaction.fee)}</dd>
+                    <dd className="mt-0.5 break-words tabular-nums text-gray-900">{formatStoredPrice(transaction.coinId, transaction.fee)}</dd>
                   </div>
                   <div>
                     <dt className="text-xs text-gray-500">Lucro realizado</dt>
                     <dd className={clsx("mt-0.5 break-words font-medium tabular-nums", transaction.realizedProfit >= 0 ? "text-emerald-700" : "text-red-700")}>
-                      {formatCurrency(transaction.realizedProfit)}
+                      {formatStoredPrice(transaction.coinId, transaction.realizedProfit)}
                     </dd>
                   </div>
                 </dl>
@@ -1056,13 +1084,13 @@ export default function CarteiraPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums">{formatNumber(transaction.amount)}</td>
-                    <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(transaction.unitPrice)}</td>
-                    <td className="px-4 py-3 text-right tabular-nums">{formatCurrency(transaction.fee)}</td>
+                    <td className="px-4 py-3 text-right tabular-nums">{formatStoredPrice(transaction.coinId, transaction.unitPrice)}</td>
+                    <td className="px-4 py-3 text-right tabular-nums">{formatStoredPrice(transaction.coinId, transaction.fee)}</td>
                     <td className={clsx(
                       "px-4 py-3 text-right font-medium tabular-nums",
                       transaction.realizedProfit >= 0 ? "text-emerald-700" : "text-red-700"
                     )}>
-                      {formatCurrency(transaction.realizedProfit)}
+                      {formatStoredPrice(transaction.coinId, transaction.realizedProfit)}
                     </td>
                   </tr>
                 ))
@@ -1084,7 +1112,7 @@ export default function CarteiraPage() {
               <Input type="number" min="0" step="0.00000001" required value={editForm.amount} onChange={(event) => setEditForm((current) => ({ ...current, amount: event.target.value }))} className="mt-1 min-h-11" />
             </label>
             <label className="block text-sm font-medium text-gray-700">
-              Preço médio (USD)
+              Preço médio ({editing?.coinId === USD_INVESTMENT_ID ? "BRL por USD" : "USD"})
               <Input type="number" min="0" step="0.01" required value={editForm.buyPrice} onChange={(event) => setEditForm((current) => ({ ...current, buyPrice: event.target.value }))} className="mt-1 min-h-11" />
             </label>
             <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">

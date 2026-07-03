@@ -5,6 +5,7 @@ import {
   IconSettings,
   IconUserCircle,
   IconWallet,
+  IconPlugConnected,
 } from "@tabler/icons-react"
 import { useSession } from "next-auth/react"
 import Image from "next/image"
@@ -40,6 +41,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       url: "/dashboard/carteira",
       icon: IconWallet,
       isActive: pathname.startsWith("/dashboard/carteira"),
+    },
+    {
+      title: "Integrações",
+      url: "/dashboard/integracoes",
+      icon: IconPlugConnected,
+      isActive: pathname.startsWith("/dashboard/integracoes"),
     },
     {
       title: "Perfil",

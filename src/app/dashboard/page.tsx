@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import CryptoChart from "./components/CryptoChart";
+import DollarChart from "./components/DollarChart";
 import CryptoTable from "./components/CryptoTable";
 import CryptoNews from "./components/CryptoNews";
 import { AlertManager } from "./components/AlertManager";
@@ -17,6 +18,7 @@ import {
   ClipboardDocumentCheckIcon,
 } from "@heroicons/react/24/outline";
 import { DashboardCrypto } from "./types";
+import { dollarInvestmentValues, USD_INVESTMENT_ID } from "@/src/modules/portfolio/investment-assets";
 import { useCurrency } from "@/src/contexts/CurrencyContext";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { Skeleton } from "@/src/components/ui/skeleton";
@@ -59,6 +61,7 @@ export default function DashboardPage() {
   const { currency, exchangeRate, formatCurrency } = useCurrency();
 
   const [cryptos, setCryptos] = useState<DashboardCrypto[]>([]);
+  const [usdBrlRate, setUsdBrlRate] = useState(1);
   const [loading, setLoading] = useState(true);
   const [portfolio, setPortfolio] = useState<PortfolioEntry[]>([]);
   const [alerts, setAlerts] = useState<AlertSummary[]>([]);
@@ -82,7 +85,10 @@ export default function DashboardPage() {
       }
 
       try {
-        const cryptosRes = await fetchWithTimeout("/api/cryptos", 8_000);
+        const [cryptosRes, rateRes] = await Promise.all([
+          fetchWithTimeout("/api/cryptos", 8_000),
+          fetchWithTimeout("/api/exchange-rates?currency=BRL", 8_000),
+        ]);
         if (cryptosRes.ok) {
           const data = await cryptosRes.json();
           if (Array.isArray(data) && isMounted) {
@@ -97,6 +103,12 @@ export default function DashboardPage() {
             cryptosRes.status,
             cryptosRes.statusText
           );
+        }
+        if (rateRes.ok) {
+          const rateData: unknown = await rateRes.json();
+          if (rateData && typeof rateData === "object" && "rate" in rateData && typeof rateData.rate === "number" && isMounted) {
+            setUsdBrlRate(rateData.rate);
+          }
         }
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return;
@@ -187,10 +199,13 @@ export default function DashboardPage() {
 
     for (const asset of portfolio) {
       const market = cryptoMap.get(asset.coinId);
+      const dollarValues = asset.coinId === USD_INVESTMENT_ID
+        ? dollarInvestmentValues(asset.amount, asset.buyPrice, usdBrlRate)
+        : null;
       const marketPrice = market?.current_price ?? asset.buyPrice;
       const marketChange = market?.price_change_percentage_24h ?? 0;
-      const investedValue = asset.amount * asset.buyPrice;
-      const currentValue = asset.amount * marketPrice;
+      const investedValue = dollarValues?.investedUsd ?? asset.amount * asset.buyPrice;
+      const currentValue = dollarValues?.currentUsd ?? asset.amount * marketPrice;
 
       invested += investedValue;
       current += currentValue;
@@ -202,7 +217,7 @@ export default function DashboardPage() {
     const dailyChange = current > 0 ? weightedDailyChange / current : 0;
 
     return { invested, current, profit, profitPct, dailyChange };
-  }, [portfolio, cryptoMap]);
+  }, [portfolio, cryptoMap, usdBrlRate]);
 
   const alertsSummary = useMemo(() => {
     const active = alerts.filter((alert) => alert.status === "ACTIVE").length;
@@ -431,6 +446,8 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         </section>
+
+        <DollarChart />
 
         <section className="grid gap-6 xl:grid-cols-2">
           <AlertManager
