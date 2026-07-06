@@ -9,7 +9,16 @@ import { Input } from "@/src/components/ui/input";
 
 interface Holding { asset: string; amount: number; syncedAt: string }
 interface Integration { id: string; provider: "BINANCE" | "METAMASK"; label: string; walletAddress?: string | null; chainId?: string | null; lastSyncedAt?: string | null; holdings: Holding[] }
-interface EthereumProvider { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> }
+interface EthereumProvider {
+  isMetaMask?: boolean;
+  providers?: EthereumProvider[];
+  request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+}
+
+interface Eip6963ProviderDetail {
+  info: { name: string; rdns: string };
+  provider: EthereumProvider;
+}
 
 export default function IntegracoesPage() {
   const [integrations, setIntegrations] = useState<Integration[]>([]);
@@ -37,10 +46,10 @@ export default function IntegracoesPage() {
   };
 
   const connectMetaMask = async () => {
-    const ethereum = (window as typeof window & { ethereum?: EthereumProvider }).ethereum;
-    if (!ethereum) { setMessage("MetaMask não encontrada no navegador."); return; }
     setLoading(true); setMessage(null);
     try {
+      const ethereum = await findMetaMaskProvider();
+      if (!ethereum) throw new Error("MetaMask não foi liberada para este site. Recarregue a página e permita o acesso da extensão ao localhost.");
       const accounts = await ethereum.request({ method: "eth_requestAccounts" });
       const chainId = await ethereum.request({ method: "eth_chainId" });
       const walletAddress = Array.isArray(accounts) && typeof accounts[0] === "string" ? accounts[0] : null;
@@ -58,10 +67,10 @@ export default function IntegracoesPage() {
   const sync = useCallback(async (integration: Integration) => {
     let holdings: Array<{ asset: string; amount: number }> = [];
     if (integration.provider === "METAMASK") {
-      const ethereum = (window as typeof window & { ethereum?: EthereumProvider }).ethereum;
+      const ethereum = await findMetaMaskProvider();
       if (!ethereum || !integration.walletAddress) return;
       const rawBalance = await ethereum.request({ method: "eth_getBalance", params: [integration.walletAddress, "latest"] });
-      if (typeof rawBalance === "string") holdings = [{ asset: "ETH", amount: Number(BigInt(rawBalance)) / 1e18 }];
+      if (typeof rawBalance === "string") holdings = [{ asset: "ETH", amount: weiToEth(rawBalance) }];
     }
     const response = await fetch(`/api/integrations/${integration.id}/sync`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ holdings }) });
     const data = await response.json();
@@ -110,4 +119,37 @@ export default function IntegracoesPage() {
       </section>
     </div>
   );
+}
+
+function weiToEth(value: string) {
+  const wei = BigInt(value);
+  const decimals = BigInt(10) ** BigInt(18);
+  const whole = wei / decimals;
+  const fraction = (wei % decimals).toString().padStart(18, "0").replace(/0+$/, "");
+  return Number(fraction ? `${whole}.${fraction}` : whole.toString());
+}
+
+async function findMetaMaskProvider(): Promise<EthereumProvider | null> {
+  const injected = (window as typeof window & { ethereum?: EthereumProvider }).ethereum;
+  const legacyProvider = injected?.providers?.find((provider) => provider.isMetaMask)
+    ?? (injected?.isMetaMask ? injected : null);
+  if (legacyProvider) return legacyProvider;
+
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (provider: EthereumProvider | null) => {
+      if (settled) return;
+      settled = true;
+      window.removeEventListener("eip6963:announceProvider", onProvider as EventListener);
+      window.clearTimeout(timeout);
+      resolve(provider);
+    };
+    const onProvider = (event: Event) => {
+      const detail = (event as CustomEvent<Eip6963ProviderDetail>).detail;
+      if (detail?.provider?.isMetaMask || detail?.info?.rdns === "io.metamask") finish(detail.provider);
+    };
+    const timeout = window.setTimeout(() => finish(null), 500);
+    window.addEventListener("eip6963:announceProvider", onProvider as EventListener);
+    window.dispatchEvent(new Event("eip6963:requestProvider"));
+  });
 }

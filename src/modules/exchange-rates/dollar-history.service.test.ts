@@ -1,6 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { parseDollarCandles } from "./dollar-history.service";
+import { fetchDollarRateHistory, parseDollarCandles } from "./dollar-history.service";
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe("parseDollarCandles", () => {
   it("orders quotes and creates USD/BRL candles", () => {
@@ -16,5 +20,23 @@ describe("parseDollarCandles", () => {
 
   it("ignores invalid quotes", () => {
     expect(parseDollarCandles([{ bid: "invalid" }])).toEqual([]);
+  });
+
+  it("uses Frankfurter when AwesomeAPI fails", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(null, { status: 503 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        rates: {
+          "2026-07-02": { BRL: 5.42 },
+          "2026-07-03": { BRL: 5.4 },
+        },
+      })));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(fetchDollarRateHistory(1)).resolves.toEqual([
+      { timestamp: "2026-07-03T00:00:00.000Z", rate: 5.4 },
+    ]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(String(fetchMock.mock.calls[1][0])).toContain("api.frankfurter.dev/v1/");
   });
 });

@@ -32,33 +32,52 @@ export async function fetchDollarCandles(days = 90): Promise<CryptoCandle[]> {
 
 export async function fetchDollarRateHistory(days: number): Promise<DollarRatePoint[]> {
   if (days <= 360) {
-    return (await fetchDollarCandles(days)).map((candle) => ({
-      timestamp: candle.timestamp,
-      rate: candle.close,
-    }));
+    try {
+      const points = (await fetchDollarCandles(days)).map((candle) => ({
+        timestamp: candle.timestamp,
+        rate: candle.close,
+      }));
+      if (points.length > 0) return points;
+    } catch (error) {
+      console.warn("AwesomeAPI dollar history unavailable; using fallback", error);
+    }
   }
 
+  return fetchFrankfurterHistory(days);
+}
+
+async function fetchFrankfurterHistory(days: number): Promise<DollarRatePoint[]> {
   const end = new Date();
   const start = new Date(end);
-  start.setUTCDate(start.getUTCDate() - days);
-  const url = new URL(`/${toDate(start)}..${toDate(end)}`, "https://api.frankfurter.app");
+  start.setUTCDate(start.getUTCDate() - days - 7);
+  const url = new URL(`/v1/${toDate(start)}..${toDate(end)}`, "https://api.frankfurter.dev");
   url.searchParams.set("from", "USD");
   url.searchParams.set("to", "BRL");
 
-  const response = await fetch(url, { next: { revalidate: 3600 } });
-  if (!response.ok) throw new Error(`Dollar long history failed with status ${response.status}`);
-  const data: unknown = await response.json();
-  if (!data || typeof data !== "object" || !("rates" in data)) return [];
-  const rates = data.rates;
-  if (!rates || typeof rates !== "object") return [];
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5_000);
 
-  return Object.entries(rates).flatMap(([date, value]) => {
-    if (!value || typeof value !== "object" || !("BRL" in value)) return [];
-    const rate = value.BRL;
-    return typeof rate === "number" && Number.isFinite(rate)
-      ? [{ timestamp: new Date(`${date}T00:00:00.000Z`).toISOString(), rate }]
-      : [];
-  });
+  try {
+    const response = await fetch(url, {
+      signal: controller.signal,
+      next: { revalidate: 3600 },
+    });
+    if (!response.ok) throw new Error(`Dollar fallback history failed with status ${response.status}`);
+    const data: unknown = await response.json();
+    if (!data || typeof data !== "object" || !("rates" in data)) return [];
+    const rates = data.rates;
+    if (!rates || typeof rates !== "object") return [];
+
+    return Object.entries(rates).flatMap(([date, value]) => {
+      if (!value || typeof value !== "object" || !("BRL" in value)) return [];
+      const rate = value.BRL;
+      return typeof rate === "number" && Number.isFinite(rate)
+        ? [{ timestamp: new Date(`${date}T00:00:00.000Z`).toISOString(), rate }]
+        : [];
+    }).slice(-days);
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 export function parseDollarCandles(data: unknown): CryptoCandle[] {
