@@ -7,7 +7,7 @@ import { Button } from "@/src/components/ui/button";
 import { Card, CardContent } from "@/src/components/ui/card";
 
 export const metadata: Metadata = {
-  title: "Controle de investimentos e criptomoedas",
+  title: "App para controlar carteira de criptomoedas",
   description: "Acompanhe sua carteira, preços de criptomoedas e alertas em um só lugar. Integre Binance e MetaMask em modo somente leitura.",
   alternates: { canonical: "/" },
 };
@@ -20,13 +20,18 @@ const features = [
 ];
 
 export default function Home() {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   const structuredData = {
     "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    name: "InvestHub",
-    applicationCategory: "FinanceApplication",
-    operatingSystem: "Web",
-    description: "Plataforma para controle de investimentos, criptomoedas, alertas e integração somente leitura com Binance e MetaMask.",
+    "@graph": [
+      { "@type": "WebSite", name: "InvestHub", url: siteUrl, inLanguage: "pt-BR" },
+      { "@type": "SoftwareApplication", name: "InvestHub", url: siteUrl, applicationCategory: "FinanceApplication", operatingSystem: "Web", description: "Aplicativo para controle de carteira de criptomoedas, alertas e integração somente leitura com Binance e MetaMask." },
+      { "@type": "FAQPage", mainEntity: [
+        { "@type": "Question", name: "O InvestHub movimenta minhas criptomoedas?", acceptedAnswer: { "@type": "Answer", text: "Não. As integrações com Binance e MetaMask são usadas em modo somente leitura para consultar e organizar saldos." } },
+        { "@type": "Question", name: "Posso acompanhar Binance e MetaMask no mesmo painel?", acceptedAnswer: { "@type": "Answer", text: "Sim. O InvestHub centraliza os saldos sincronizados para facilitar o acompanhamento da carteira." } },
+        { "@type": "Question", name: "O InvestHub faz recomendação de investimento?", acceptedAnswer: { "@type": "Answer", text: "Não. A plataforma organiza dados e alertas para acompanhamento e não oferece recomendação financeira." } },
+      ] },
+    ],
   };
 
   return (
@@ -76,6 +81,27 @@ export default function Home() {
           <h2 className="text-3xl font-bold">Organize seus investimentos hoje</h2>
           <p className="mx-auto mt-4 max-w-xl text-gray-300">Crie sua conta e acompanhe sua carteira com uma visão simples dos ativos que importam para você.</p>
           <Button asChild size="lg" className="mt-7 min-h-12"><Link href="/register">Criar minha conta</Link></Button>
+        </div>
+      </section>
+
+      <section className="border-t border-gray-200 px-4 py-16 sm:px-6 lg:px-8" aria-labelledby="guias-title">
+        <div className="mx-auto max-w-5xl">
+          <h2 id="guias-title" className="text-center text-3xl font-bold">Aprenda a organizar sua carteira cripto</h2>
+          <div className="mt-8 grid gap-4 md:grid-cols-2">
+            <Link href="/controle-de-carteira-cripto" className="rounded-2xl border border-gray-200 p-6 transition-colors hover:border-emerald-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"><h3 className="font-semibold">Como controlar uma carteira de criptomoedas</h3><p className="mt-2 text-sm leading-6 text-gray-600">Veja como centralizar ativos, acompanhar preços e criar uma rotina de monitoramento.</p></Link>
+            <Link href="/integracao-binance-metamask" className="rounded-2xl border border-gray-200 p-6 transition-colors hover:border-emerald-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"><h3 className="font-semibold">Integração Binance e MetaMask</h3><p className="mt-2 text-sm leading-6 text-gray-600">Entenda como funciona a sincronização somente leitura e quais cuidados tomar.</p></Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-gray-50 px-4 py-16 sm:px-6 lg:px-8" aria-labelledby="faq-title">
+        <div className="mx-auto max-w-3xl">
+          <h2 id="faq-title" className="text-3xl font-bold">Perguntas frequentes</h2>
+          <div className="mt-8 space-y-6">
+            <div><h3 className="font-semibold">O InvestHub movimenta minhas criptomoedas?</h3><p className="mt-2 text-gray-600">Não. Binance e MetaMask são conectadas em modo somente leitura para consultar e organizar saldos.</p></div>
+            <div><h3 className="font-semibold">Posso acompanhar Binance e MetaMask no mesmo painel?</h3><p className="mt-2 text-gray-600">Sim. Os saldos sincronizados aparecem em uma visão centralizada da carteira.</p></div>
+            <div><h3 className="font-semibold">O InvestHub faz recomendação de investimento?</h3><p className="mt-2 text-gray-600">Não. A plataforma organiza informações e alertas para acompanhamento pessoal.</p></div>
+          </div>
         </div>
       </section>
 
