@@ -5,7 +5,7 @@ export const emailSchema = z.object({
 });
 
 export const resetPasswordSchema = z.object({
-  token: z.string().min(32).max(256),
+  token: z.string().min(32).max(256).optional().or(z.literal("")),
   password: z.string().min(8).max(100),
 });
 

@@ -5,7 +5,7 @@ import { createSupabaseServerClient } from "@/lib/supabase";
 import { emailSchema } from "@/src/modules/auth/auth.schemas";
 
 const genericResponse = {
-  message: "Se o e-mail estiver cadastrado, enviaremos as instrucoes.",
+  message: "Se o e-mail estiver cadastrado, enviaremos as instruções.",
 };
 
 export async function POST(request: Request) {
@@ -22,9 +22,17 @@ export async function POST(request: Request) {
 
   const supabase = await createSupabaseServerClient();
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? process.env.NEXTAUTH_URL;
-  await supabase.auth.resetPasswordForEmail(parsed.data.email, {
+  const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
     redirectTo: siteUrl ? new URL("/reset-password", siteUrl).toString() : undefined,
   });
+
+  if (error) {
+    console.error("Supabase não enviou o e-mail de reset:", {
+      status: error.status,
+      code: error.code,
+      message: error.message,
+    });
+  }
 
   return NextResponse.json(genericResponse);
 }

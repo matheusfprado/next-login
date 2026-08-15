@@ -11,14 +11,27 @@ export async function POST(request: Request) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(
-    parsed.data.token
-  );
-  if (exchangeError) {
-    return NextResponse.json(
-      { error: "Token invalido ou expirado." },
-      { status: 400 }
+  if (parsed.data.token) {
+    const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(
+      parsed.data.token
     );
+    if (exchangeError) {
+      const { data } = await supabase.auth.getUser();
+      if (!data.user?.id) {
+        return NextResponse.json(
+          { error: "Token inválido ou expirado." },
+          { status: 400 }
+        );
+      }
+    }
+  } else {
+    const { data } = await supabase.auth.getUser();
+    if (!data.user?.id) {
+      return NextResponse.json(
+        { error: "Sessão de recuperação expirada. Solicite um novo link." },
+        { status: 400 }
+      );
+    }
   }
 
   const { data, error } = await supabase.auth.updateUser({

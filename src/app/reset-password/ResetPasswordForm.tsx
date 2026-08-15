@@ -26,7 +26,13 @@ import { Input } from "@/src/components/ui/input";
 import { Label } from "@/src/components/ui/label";
 import { Progress } from "@/src/components/ui/progress";
 
-export function ResetPasswordForm({ token }: { token: string }) {
+export function ResetPasswordForm({
+  token,
+  hasRecoverySession,
+}: {
+  token: string;
+  hasRecoverySession: boolean;
+}) {
   const router = useRouter();
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
@@ -54,7 +60,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
   const passwordsMatch =
     Boolean(confirmation) && password.length > 0 && password === confirmation;
   const canSubmit =
-    Boolean(token) &&
+    (Boolean(token) || hasRecoverySession) &&
     strength === 100 &&
     passwordsMatch &&
     !loading;
@@ -63,7 +69,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
     event.preventDefault();
     setError(null);
 
-    if (!token) {
+    if (!token && !hasRecoverySession) {
       setError("Link inválido ou expirado. Solicite um novo e-mail.");
       return;
     }
@@ -120,7 +126,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
       </CardHeader>
 
       <CardContent>
-        {!token ? (
+        {!token && !hasRecoverySession ? (
           <div className="space-y-5">
             <div
               role="alert"

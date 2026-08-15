@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
+import type { NextRequest, NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
 import { profileAvatarUrl } from "@/src/modules/auth/avatar";
@@ -53,6 +54,35 @@ export async function createSupabaseServerClient() {
       },
     },
   });
+}
+
+export function createSupabaseRouteClient(request: NextRequest) {
+  const cookiesToSet: {
+    name: string;
+    value: string;
+    options: Parameters<NextResponse["cookies"]["set"]>[2];
+  }[] = [];
+
+  const supabase = createServerClient(supabaseUrl(), supabasePublishableKey(), {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
+      },
+      setAll(nextCookiesToSet) {
+        cookiesToSet.push(...nextCookiesToSet);
+      },
+    },
+  });
+
+  return {
+    supabase,
+    applyCookies(response: NextResponse) {
+      cookiesToSet.forEach(({ name, value, options }) => {
+        response.cookies.set(name, value, options);
+      });
+      return response;
+    },
+  };
 }
 
 export function createSupabaseAdminClient() {

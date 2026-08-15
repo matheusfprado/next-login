@@ -8,6 +8,7 @@ export default async function LoginPage({
     registered?: string
     verified?: string
     emailChanged?: string
+    error?: string
   }>
 }) {
   const params = await searchParams
@@ -17,12 +18,16 @@ export default async function LoginPage({
       ? "E-mail confirmado. Sua conta já está ativa."
       : params.emailChanged
         ? "Novo e-mail confirmado. Entre novamente para continuar."
-        : undefined
+        : params.error === "oauth"
+          ? "Não foi possível concluir o login social. Tente novamente."
+          : undefined
 
   return (
     <div className="flex min-h-svh flex-col items-center justify-center gap-7 bg-background p-6 text-foreground dark:bg-black md:p-10">
       <div className="flex w-full max-w-sm flex-col gap-6">
-        <div className="self-center"><Brand compact /></div>
+        <div className="self-center">
+          <Brand compact />
+        </div>
         <LoginForm notice={notice} />
       </div>
     </div>

@@ -6,10 +6,11 @@ import { ResetPasswordForm } from "./ResetPasswordForm";
 export default async function ResetPasswordPage({
   searchParams,
 }: {
-  searchParams: Promise<{ code?: string; token?: string }>;
+  searchParams: Promise<{ code?: string; token?: string; verified?: string }>;
 }) {
-  const { code, token } = await searchParams;
+  const { code, token, verified } = await searchParams;
   const resetToken = code ?? token ?? "";
+  const hasRecoverySession = verified === "1";
 
   return (
     <main className="min-h-dvh bg-muted">
@@ -54,7 +55,7 @@ export default async function ResetPasswordPage({
           <div className="flex justify-center lg:hidden">
             <Brand subtitle="Segurança da conta" />
           </div>
-          <ResetPasswordForm token={resetToken} />
+          <ResetPasswordForm token={resetToken} hasRecoverySession={hasRecoverySession} />
         </section>
       </div>
     </main>

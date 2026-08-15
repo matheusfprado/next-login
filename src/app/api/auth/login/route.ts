@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { createServerClient } from "@supabase/ssr";
-import type { CookieOptions } from "@supabase/ssr";
+import bcrypt from "bcryptjs";
+import { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import {
   createSupabaseAdminClient,
+  createSupabaseRouteClient,
 } from "@/lib/supabase";
 
 const loginSchema = z.object({
@@ -14,12 +15,7 @@ const loginSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  const cookiesToSet: Array<{
-    name: string;
-    value: string;
-    options: CookieOptions;
-  }> = [];
-  const supabase = createRouteSupabaseClient(req, cookiesToSet);
+  const { supabase, applyCookies } = createSupabaseRouteClient(req);
   const parsed = loginSchema.safeParse(await req.json().catch(() => null));
 
   if (!parsed.success) {
@@ -34,20 +30,17 @@ export async function POST(req: NextRequest) {
   });
 
   if (error) {
-    const migrated = await migrateLegacyUserToSupabase(email).catch((error: unknown) => {
+    const migrated = await migrateLegacyUserToSupabase(email, password).catch((error: unknown) => {
       console.error("Erro ao migrar usuario legado para Supabase Auth:", error);
       return false;
     });
     if (migrated) {
       const retry = await supabase.auth.signInWithPassword({ email, password });
       if (!retry.error) {
-        const response = NextResponse.json({
+        return applyCookies(NextResponse.json({
           success: true,
           authenticated: Boolean(retry.data.user?.id || retry.data.session?.access_token),
-          setCookieCount: cookiesToSet.length,
-        });
-        applySupabaseCookies(response, cookiesToSet);
-        return response;
+        }));
       }
     }
 
@@ -57,55 +50,13 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const response = NextResponse.json({
+  return applyCookies(NextResponse.json({
     success: true,
     authenticated: Boolean(data.user?.id || data.session?.access_token),
-    setCookieCount: cookiesToSet.length,
-  });
-  applySupabaseCookies(response, cookiesToSet);
-  return response;
+  }));
 }
 
-function createRouteSupabaseClient(
-  request: NextRequest,
-  pendingCookies: Array<{ name: string; value: string; options: CookieOptions }>
-) {
-  return createServerClient(supabaseUrl(), supabasePublishableKey(), {
-    cookies: {
-      getAll() {
-        return request.cookies.getAll();
-      },
-      setAll(cookiesToSet) {
-        cookiesToSet.forEach((cookie) => pendingCookies.push(cookie));
-      },
-    },
-  });
-}
-
-function applySupabaseCookies(
-  response: NextResponse,
-  cookiesToSet: Array<{ name: string; value: string; options: CookieOptions }>
-) {
-  cookiesToSet.forEach(({ name, value, options }) =>
-    response.cookies.set(name, value, options)
-  );
-}
-
-function supabaseUrl() {
-  const value = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
-  if (!value) throw new Error("SUPABASE_URL is required");
-  return value;
-}
-
-function supabasePublishableKey() {
-  const value =
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-    process.env.SUPABASE_PUBLISHABLE_KEY;
-  if (!value) throw new Error("SUPABASE_PUBLISHABLE_KEY is required");
-  return value;
-}
-
-async function migrateLegacyUserToSupabase(email: string) {
+async function migrateLegacyUserToSupabase(email: string, password: string) {
   const user = await prisma.user.findUnique({
     where: { email },
     select: {
@@ -119,11 +70,14 @@ async function migrateLegacyUserToSupabase(email: string) {
 
   if (!user?.email || !user.password) return false;
 
+  const validLegacyPassword = await bcrypt.compare(password, user.password);
+  if (!validLegacyPassword) return false;
+
   const admin = createSupabaseAdminClient();
   const attributes = {
     email: user.email,
-    password_hash: user.password,
-    email_confirm: Boolean(user.emailVerified),
+    password,
+    email_confirm: true,
     user_metadata: { name: user.name },
   };
 
@@ -135,11 +89,13 @@ async function migrateLegacyUserToSupabase(email: string) {
   let supabaseUserId = created.data.user?.id ?? null;
 
   if (created.error) {
-    console.error("Falha ao criar usuario legado no Supabase Auth:", {
-      status: created.error.status,
-      code: created.error.code,
-      message: created.error.message,
-    });
+    if (created.error.code !== "email_exists") {
+      console.error("Falha ao criar usuario legado no Supabase Auth:", {
+        status: created.error.status,
+        code: created.error.code,
+        message: created.error.message,
+      });
+    }
 
     supabaseUserId = await findSupabaseUserIdByEmail(email);
     if (!supabaseUserId) return false;
@@ -174,6 +130,22 @@ async function migrateLegacyUserToSupabase(email: string) {
 }
 
 async function findSupabaseUserIdByEmail(email: string) {
+  const [dbUser] = await prisma
+    .$queryRaw<{ id: string }[]>(
+      Prisma.sql`
+        SELECT id::text AS id
+        FROM auth.users
+        WHERE lower(email) = lower(${email})
+        LIMIT 1
+      `
+    )
+    .catch((error: unknown) => {
+      console.error("Falha ao consultar usuario no schema auth:", error);
+      return [];
+    });
+
+  if (dbUser?.id) return dbUser.id;
+
   const admin = createSupabaseAdminClient();
   const pageSize = 1000;
   let page = 1;
