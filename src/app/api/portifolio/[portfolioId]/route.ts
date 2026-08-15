@@ -1,7 +1,6 @@
-import { getServerSession } from "next-auth";
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 
-import { authOptions } from "@/lib/authOptions";
+import { getCurrentSession } from "@/lib/supabase";
 import { updatePortfolioEntrySchema } from "@/src/modules/portfolio/portfolio.schemas";
 import { serializePortfolioEntry } from "@/src/modules/portfolio/portfolio.serializers";
 import {
@@ -15,7 +14,7 @@ interface RouteContext {
 }
 
 export async function PATCH(request: Request, { params }: RouteContext) {
-  const session = await getServerSession(authOptions);
+  const session = await getCurrentSession();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
@@ -42,7 +41,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
 }
 
 export async function DELETE(_request: Request, { params }: RouteContext) {
-  const session = await getServerSession(authOptions);
+  const session = await getCurrentSession();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
@@ -66,3 +65,5 @@ function handlePortfolioError(error: unknown) {
     { status: 500 }
   );
 }
+
+

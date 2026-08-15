@@ -1,9 +1,8 @@
-import { CSSProperties, ReactNode } from "react";
+﻿import { CSSProperties, ReactNode } from "react";
 import type { Metadata } from "next";
-import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 
-import { authOptions } from "@/lib/authOptions";
+import { getCurrentSession } from "@/lib/supabase";
 import { AppSidebar } from "@/src/components/app-sidebar";
 import { SiteHeader } from "@/src/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/src/components/ui/sidebar";
@@ -17,9 +16,10 @@ export default async function DashboardLayout({
 }: {
   children: ReactNode;
 }) {
-  const session = await getServerSession(authOptions);
+  const session = await getCurrentSession();
 
   if (!session?.user?.id) {
+    console.warn("Dashboard sem sessão Supabase válida; redirecionando para /login.");
     redirect("/login");
   }
 
@@ -40,3 +40,5 @@ export default async function DashboardLayout({
     </SidebarProvider>
   );
 }
+
+

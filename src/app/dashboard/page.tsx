@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/src/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import CryptoChart from "./components/CryptoChart";
 import DollarChart from "./components/DollarChart";
@@ -56,7 +56,7 @@ interface GoalSummary {
 }
 
 export default function DashboardPage() {
-  const { status } = useSession();
+  const { status } = useAuth();
   const router = useRouter();
   const { currency, exchangeRate, formatCurrency } = useCurrency();
 

@@ -1,8 +1,7 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+﻿import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { authOptions } from "@/lib/authOptions";
+import { getCurrentSession } from "@/lib/supabase";
 import { prisma } from "@/lib/prisma";
 
 const updateSchema = z.object({
@@ -34,7 +33,7 @@ export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ goalId: string | string[] | undefined }> }
 ) {
-  const session = await getServerSession(authOptions);
+  const session = await getCurrentSession();
   if (!session?.user) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
@@ -100,7 +99,7 @@ export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ goalId: string | string[] | undefined }> }
 ) {
-  const session = await getServerSession(authOptions);
+  const session = await getCurrentSession();
   if (!session?.user) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
@@ -120,3 +119,5 @@ export async function DELETE(
 
   return NextResponse.json({ success: true });
 }
+
+

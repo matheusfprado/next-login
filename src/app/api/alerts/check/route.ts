@@ -1,11 +1,10 @@
-import { getServerSession } from "next-auth";
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 
-import { authOptions } from "@/lib/authOptions";
+import { getCurrentSession } from "@/lib/supabase";
 import { processPriceAlerts } from "@/src/modules/alerts/alerts.job";
 
 export async function POST() {
-  const session = await getServerSession(authOptions);
+  const session = await getCurrentSession();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
@@ -36,3 +35,5 @@ export async function POST() {
     );
   }
 }
+
+

@@ -1,7 +1,6 @@
-import { getServerSession } from "next-auth";
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 
-import { authOptions } from "@/lib/authOptions";
+import { getCurrentSession } from "@/lib/supabase";
 import { prisma } from "@/lib/prisma";
 import { profileAvatarUrl } from "@/src/modules/auth/avatar";
 
@@ -24,7 +23,7 @@ function hasValidSignature(bytes: Uint8Array, type: string) {
 }
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
+  const session = await getCurrentSession();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
@@ -50,7 +49,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const session = await getServerSession(authOptions);
+  const session = await getCurrentSession();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
@@ -83,7 +82,7 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE() {
-  const session = await getServerSession(authOptions);
+  const session = await getCurrentSession();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
@@ -95,3 +94,5 @@ export async function DELETE() {
 
   return new Response(null, { status: 204 });
 }
+
+

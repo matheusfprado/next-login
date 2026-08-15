@@ -1,18 +1,17 @@
-import { getServerSession } from "next-auth";
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 
-import { authOptions } from "@/lib/authOptions";
+import { getCurrentSession } from "@/lib/supabase";
 import { connectIntegrationSchema } from "@/src/modules/integrations/integration.schemas";
 import { connectBinance, connectMetaMask, disconnectIntegration, listIntegrations } from "@/src/modules/integrations/integration.service";
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
+  const session = await getCurrentSession();
   if (!session?.user?.id) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   return NextResponse.json(await listIntegrations(session.user.id));
 }
 
 export async function POST(request: Request) {
-  const session = await getServerSession(authOptions);
+  const session = await getCurrentSession();
   if (!session?.user?.id) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   const parsed = connectIntegrationSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Dados inválidos" }, { status: 400 });
@@ -26,10 +25,12 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const session = await getServerSession(authOptions);
+  const session = await getCurrentSession();
   if (!session?.user?.id) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   const id = new URL(request.url).searchParams.get("id");
   if (!id) return NextResponse.json({ error: "Conexão inválida" }, { status: 400 });
   await disconnectIntegration(session.user.id, id);
   return new NextResponse(null, { status: 204 });
 }
+
+

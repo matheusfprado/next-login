@@ -2,7 +2,6 @@
 
 import { FormEvent, useState } from "react"
 import { EyeIcon, EyeOffIcon, RefreshCwIcon } from "lucide-react"
-import { signIn } from "next-auth/react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
@@ -88,13 +87,31 @@ export function LoginForm({
     }
 
     setLoading(true)
-    const result = await signIn(mode === "password" ? "credentials" : "email-token", {
-      redirect: false,
-      email: email.trim().toLowerCase(),
-      ...(mode === "password" ? { password } : { token }),
-    })
+    let response: Response
 
-    if (!result?.ok) {
+    try {
+      response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          password,
+        }),
+      })
+    } catch (error) {
+      console.error("Erro de rede no login:", error)
+      const message = "Não foi possível conectar ao servidor. Tente novamente."
+      setError(message)
+      toast.error("Não foi possível entrar", { description: message })
+      setLoading(false)
+      return
+    }
+
+    const data = (await response.json().catch(() => null)) as
+      | { authenticated?: boolean; error?: string }
+      | null
+
+    if (!response.ok || !data?.authenticated) {
       const message = mode === "password"
         ? "E-mail ou senha inválidos."
         : "Código inválido ou expirado. Solicite um novo código."

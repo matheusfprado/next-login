@@ -1,42 +1,60 @@
-import bcrypt from "bcryptjs";
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
-import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
+import {
+  createSupabaseAdminClient,
+  createSupabaseServerClient,
+  getCurrentSession,
+} from "@/lib/supabase";
 import { changePasswordSchema } from "@/src/modules/auth/auth.schemas";
 import { sendPasswordChangedEmail } from "@/src/modules/auth/auth-emails.service";
 
 export async function PATCH(request: Request) {
-  const session = await getServerSession(authOptions);
+  const session = await getCurrentSession();
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-  }
-  const body: unknown = await request.json().catch(() => null);
-  const parsed = changePasswordSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Dados inválidos" }, { status: 400 });
+    return NextResponse.json({ error: "Nao autorizado" }, { status: 401 });
   }
 
-  const user = await prisma.user.findUnique({ where: { id: session.user.id } });
-  if (!user?.password) {
-    return NextResponse.json({ error: "Conta sem senha local." }, { status: 422 });
+  const parsed = changePasswordSchema.safeParse(
+    await request.json().catch(() => null)
+  );
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Dados invalidos" }, { status: 400 });
   }
-  const valid = await bcrypt.compare(parsed.data.currentPassword, user.password);
-  if (!valid) {
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { id: true, email: true },
+  });
+  if (!user?.email) {
+    return NextResponse.json({ error: "Conta nao encontrada." }, { status: 404 });
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error: signInError } = await supabase.auth.signInWithPassword({
+    email: user.email,
+    password: parsed.data.currentPassword,
+  });
+  if (signInError) {
     return NextResponse.json({ error: "Senha atual incorreta." }, { status: 400 });
   }
 
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { password: await bcrypt.hash(parsed.data.newPassword, 12) },
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin.auth.admin.updateUserById(user.id, {
+    password: parsed.data.newPassword,
   });
-  if (user.email) {
-    try {
-      await sendPasswordChangedEmail(user.email);
-    } catch (error) {
-      console.error("Erro ao enviar alerta de alteração de senha:", error);
-    }
+  if (error) {
+    return NextResponse.json(
+      { error: "Nao foi possivel alterar a senha." },
+      { status: 400 }
+    );
   }
+
+  try {
+    await sendPasswordChangedEmail(user.email);
+  } catch (error) {
+    console.error("Erro ao enviar alerta de alteracao de senha:", error);
+  }
+
   return NextResponse.json({ success: true });
 }

@@ -1,8 +1,7 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+﻿import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { authOptions } from "@/lib/authOptions";
+import { getCurrentSession } from "@/lib/supabase";
 import { prisma } from "@/lib/prisma";
 
 const baseSettingsSchema = z.object({
@@ -22,7 +21,7 @@ const settingsSchema = baseSettingsSchema.partial().refine(
 );
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
+  const session = await getCurrentSession();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
@@ -45,7 +44,7 @@ export async function GET() {
 }
 
 export async function PATCH(request: Request) {
-  const session = await getServerSession(authOptions);
+  const session = await getCurrentSession();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
@@ -112,3 +111,5 @@ export async function PATCH(request: Request) {
 
   return NextResponse.json(updated);
 }
+
+

@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 import React, { ElementType, useState } from "react";
-import { signOut, useSession } from "next-auth/react";
+import { useAuth } from "@/src/contexts/AuthContext";
 import {
   HomeIcon,
   UserIcon,
@@ -16,7 +16,7 @@ import Brand from "../../components/Brand";
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { data: session } = useSession();
+  const { data: session, signOut } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   type SidebarItem = {
@@ -160,3 +160,4 @@ export default function Sidebar() {
     </>
   );
 }
+

@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import {
   IconDashboard,
@@ -7,7 +7,7 @@ import {
   IconWallet,
   IconPlugConnected,
 } from "@tabler/icons-react"
-import { useSession } from "next-auth/react"
+import { useAuth } from "@/src/contexts/AuthContext";
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -27,7 +27,7 @@ import {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
-  const { data: session } = useSession()
+  const { data: session } = useAuth()
 
   const items = [
     {
@@ -101,3 +101,4 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     </Sidebar>
   )
 }
+

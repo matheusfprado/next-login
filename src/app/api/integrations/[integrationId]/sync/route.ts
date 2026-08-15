@@ -1,12 +1,11 @@
-import { getServerSession } from "next-auth";
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 
-import { authOptions } from "@/lib/authOptions";
+import { getCurrentSession } from "@/lib/supabase";
 import { metamaskSyncSchema } from "@/src/modules/integrations/integration.schemas";
 import { listIntegrations, syncIntegration } from "@/src/modules/integrations/integration.service";
 
 export async function POST(request: Request, { params }: { params: Promise<{ integrationId: string }> }) {
-  const session = await getServerSession(authOptions);
+  const session = await getCurrentSession();
   if (!session?.user?.id) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   const body = await request.json().catch(() => ({}));
   const parsed = metamaskSyncSchema.safeParse(body);
@@ -18,3 +17,5 @@ export async function POST(request: Request, { params }: { params: Promise<{ int
     return NextResponse.json({ error: error instanceof Error ? error.message : "Falha ao sincronizar" }, { status: 422 });
   }
 }
+
+

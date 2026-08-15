@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import { ReactNode, useEffect, useMemo, useState } from "react";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/src/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import Loading from "../../components/Loading";
 import {
@@ -43,7 +43,7 @@ interface SelectSetting {
 }
 
 export default function ConfiguracoesPage() {
-  const { data: session, status } = useSession();
+  const { data: session, status } = useAuth();
   const router = useRouter();
   const { setCurrency } = useCurrency();
   const [saving, setSaving] = useState(false);
@@ -342,6 +342,7 @@ export default function ConfiguracoesPage() {
     </>
   );
 }
+
 
 
 

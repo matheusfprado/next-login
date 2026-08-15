@@ -1,47 +1,41 @@
-import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 
-import { prisma } from "@/lib/prisma";
+import { createSupabaseServerClient } from "@/lib/supabase";
 import { resetPasswordSchema } from "@/src/modules/auth/auth.schemas";
-import { hashToken } from "@/src/modules/auth/tokens.service";
 import { sendPasswordChangedEmail } from "@/src/modules/auth/auth-emails.service";
 
 export async function POST(request: Request) {
-  const body: unknown = await request.json().catch(() => null);
-  const parsed = resetPasswordSchema.safeParse(body);
+  const parsed = resetPasswordSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
-    return NextResponse.json({ error: "Dados inválidos" }, { status: 400 });
+    return NextResponse.json({ error: "Dados invalidos" }, { status: 400 });
   }
 
-  const token = await prisma.passwordResetToken.findFirst({
-    where: {
-      tokenHash: hashToken(parsed.data.token),
-      usedAt: null,
-      expiresAt: { gt: new Date() },
-    },
-    include: { user: { select: { email: true } } },
-  });
-  if (!token) {
+  const supabase = await createSupabaseServerClient();
+  const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(
+    parsed.data.token
+  );
+  if (exchangeError) {
     return NextResponse.json(
-      { error: "Token inválido ou expirado." },
+      { error: "Token invalido ou expirado." },
       { status: 400 }
     );
   }
 
-  const password = await bcrypt.hash(parsed.data.password, 12);
-  await prisma.$transaction([
-    prisma.user.update({ where: { id: token.userId }, data: { password } }),
-    prisma.passwordResetToken.update({
-      where: { id: token.id },
-      data: { usedAt: new Date() },
-    }),
-  ]);
+  const { data, error } = await supabase.auth.updateUser({
+    password: parsed.data.password,
+  });
+  if (error) {
+    return NextResponse.json(
+      { error: "Nao foi possivel redefinir a senha." },
+      { status: 400 }
+    );
+  }
 
-  if (token.user.email) {
+  if (data.user.email) {
     try {
-      await sendPasswordChangedEmail(token.user.email);
+      await sendPasswordChangedEmail(data.user.email);
     } catch (error) {
-      console.error("Erro ao enviar alerta de alteração de senha:", error);
+      console.error("Erro ao enviar alerta de alteracao de senha:", error);
     }
   }
 

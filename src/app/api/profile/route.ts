@@ -1,34 +1,27 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import { z } from "zod";
-import bcrypt from "bcryptjs";
 
-import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
-import {
-  sendEmailChangeRequestedEmail,
-  sendEmailChangeVerificationEmail,
-} from "@/src/modules/auth/auth-emails.service";
-import { createEmailVerificationToken } from "@/src/modules/auth/tokens.service";
+import { createSupabaseServerClient, getCurrentSession } from "@/lib/supabase";
 import { profileAvatarUrl } from "@/src/modules/auth/avatar";
 
 const profileSchema = z.object({
   name: z.string().trim().min(1, "Informe um nome.").max(120, "Nome muito grande."),
-  email: z.string().trim().toLowerCase().email("E-mail inválido."),
+  email: z.string().trim().toLowerCase().email("E-mail invalido."),
   currentPassword: z.string().min(1).optional(),
   phone: z
     .string()
     .trim()
     .min(8, "Telefone muito curto.")
-    .max(20, "Telefone inválido.")
+    .max(20, "Telefone invalido.")
     .optional()
     .or(z.literal("").transform(() => undefined)),
 });
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
+  const session = await getCurrentSession();
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    return NextResponse.json({ error: "Nao autorizado" }, { status: 401 });
   }
 
   const user = await prisma.user.findUnique({
@@ -46,7 +39,7 @@ export async function GET() {
   });
 
   if (!user) {
-    return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 });
+    return NextResponse.json({ error: "Usuario nao encontrado" }, { status: 404 });
   }
 
   return NextResponse.json({
@@ -57,18 +50,16 @@ export async function GET() {
 }
 
 export async function PATCH(request: Request) {
-  const session = await getServerSession(authOptions);
+  const session = await getCurrentSession();
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    return NextResponse.json({ error: "Nao autorizado" }, { status: 401 });
   }
 
-  const body = await request.json().catch(() => null);
-  const parsed = profileSchema.safeParse(body);
-
+  const parsed = profileSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json(
       {
-        error: "Dados inválidos",
+        error: "Dados invalidos",
         fieldErrors: parsed.error.flatten().fieldErrors,
       },
       { status: 400 }
@@ -80,19 +71,28 @@ export async function PATCH(request: Request) {
   try {
     const currentUser = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { email: true, password: true },
+      select: { email: true },
     });
     if (!currentUser?.email) {
-      return NextResponse.json({ error: "Usuário não encontrado." }, { status: 404 });
+      return NextResponse.json({ error: "Usuario nao encontrado." }, { status: 404 });
     }
 
     const emailChanged = currentUser.email !== email;
+    const supabase = await createSupabaseServerClient();
+
     if (emailChanged) {
-      if (
-        !currentPassword ||
-        !currentUser.password ||
-        !(await bcrypt.compare(currentPassword, currentUser.password))
-      ) {
+      if (!currentPassword) {
+        return NextResponse.json(
+          { error: "Confirme sua senha atual para alterar o e-mail." },
+          { status: 400 }
+        );
+      }
+
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: currentUser.email,
+        password: currentPassword,
+      });
+      if (signInError) {
         return NextResponse.json(
           { error: "Confirme sua senha atual para alterar o e-mail." },
           { status: 400 }
@@ -102,8 +102,16 @@ export async function PATCH(request: Request) {
       const emailInUse = await prisma.user.findUnique({ where: { email } });
       if (emailInUse) {
         return NextResponse.json(
-          { error: "Este e-mail já está em uso." },
+          { error: "Este e-mail ja esta em uso." },
           { status: 409 }
+        );
+      }
+
+      const { error } = await supabase.auth.updateUser({ email });
+      if (error) {
+        return NextResponse.json(
+          { error: "Nao foi possivel solicitar a troca de e-mail." },
+          { status: 400 }
         );
       }
     }
@@ -123,41 +131,29 @@ export async function PATCH(request: Request) {
       },
     });
 
-    if (emailChanged) {
-      const token = await createEmailVerificationToken(
-        session.user.id,
-        email,
-        "EMAIL_CHANGE"
-      );
-      await sendEmailChangeVerificationEmail(email, token);
-      try {
-        await sendEmailChangeRequestedEmail(currentUser.email, email);
-      } catch (error) {
-        console.error("Erro ao enviar alerta para o e-mail atual:", error);
-      }
-    }
-
     return NextResponse.json({
       user: updated,
       emailChangePending: emailChanged,
       message: emailChanged
-        ? "Enviamos um link de confirmação para o novo e-mail."
+        ? "Enviamos a confirmacao para o novo e-mail."
         : "Perfil atualizado com sucesso.",
     });
   } catch (error: unknown) {
-    if (typeof error === "object" && error !== null && "code" in error) {
-      // Prisma unique constraint violation
-      if ((error as { code?: string }).code === "P2002") {
-        return NextResponse.json(
-          { error: "E-mail ou telefone já está em uso." },
-          { status: 409 }
-        );
-      }
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      (error as { code?: string }).code === "P2002"
+    ) {
+      return NextResponse.json(
+        { error: "E-mail ou telefone ja esta em uso." },
+        { status: 409 }
+      );
     }
 
     console.error("Erro ao atualizar perfil:", error);
     return NextResponse.json(
-      { error: "Não foi possível salvar o perfil." },
+      { error: "Nao foi possivel salvar o perfil." },
       { status: 500 }
     );
   }

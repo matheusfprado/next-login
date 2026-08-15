@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
-import { signOut, useSession } from "next-auth/react";
+import { useAuth } from "@/src/contexts/AuthContext";
 import {
   CheckCircle2,
   CircleAlert,
@@ -56,7 +56,7 @@ type ProfileResponse = ProfileForm & {
 const emptyProfile: ProfileForm = { name: "", email: "", phone: "" };
 
 export default function PerfilPage() {
-  const { status, update: updateSession } = useSession();
+  const { status, refresh: updateSession, signOut } = useAuth();
   const [form, setForm] = useState<ProfileForm>(emptyProfile);
   const [avatar, setAvatar] = useState<string | null>(null);
   const [avatarSaving, setAvatarSaving] = useState(false);
@@ -843,3 +843,4 @@ function ProfileField({
     </Card>
   );
 }
+

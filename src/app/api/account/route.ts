@@ -1,10 +1,12 @@
-import bcrypt from "bcryptjs";
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
+import {
+  createSupabaseAdminClient,
+  createSupabaseServerClient,
+  getCurrentSession,
+} from "@/lib/supabase";
 
 const deleteAccountSchema = z.object({
   currentPassword: z.string().min(1),
@@ -12,13 +14,14 @@ const deleteAccountSchema = z.object({
 });
 
 export async function DELETE(request: Request) {
-  const session = await getServerSession(authOptions);
+  const session = await getCurrentSession();
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    return NextResponse.json({ error: "Nao autorizado" }, { status: 401 });
   }
 
-  const body: unknown = await request.json().catch(() => null);
-  const parsed = deleteAccountSchema.safeParse(body);
+  const parsed = deleteAccountSchema.safeParse(
+    await request.json().catch(() => null)
+  );
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Confirme sua senha e digite EXCLUIR." },
@@ -28,27 +31,32 @@ export async function DELETE(request: Request) {
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { password: true },
+    select: { id: true, email: true },
   });
-  if (!user) {
-    return NextResponse.json({ error: "Conta não encontrada." }, { status: 404 });
+  if (!user?.email) {
+    return NextResponse.json({ error: "Conta nao encontrada." }, { status: 404 });
   }
-  if (!user.password) {
-    return NextResponse.json(
-      { error: "Esta conta não possui senha local para confirmação." },
-      { status: 422 }
-    );
-  }
-  if (!(await bcrypt.compare(parsed.data.currentPassword, user.password))) {
+
+  const supabase = await createSupabaseServerClient();
+  const { error: signInError } = await supabase.auth.signInWithPassword({
+    email: user.email,
+    password: parsed.data.currentPassword,
+  });
+  if (signInError) {
     return NextResponse.json({ error: "Senha atual incorreta." }, { status: 400 });
   }
 
-  const deleted = await prisma.user.deleteMany({
-    where: { id: session.user.id },
-  });
-  if (deleted.count === 0) {
-    return NextResponse.json({ error: "Conta não encontrada." }, { status: 404 });
+  await prisma.user.deleteMany({ where: { id: user.id } });
+
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin.auth.admin.deleteUser(user.id);
+  if (error) {
+    return NextResponse.json(
+      { error: "Conta local removida, mas falhou remover Auth Supabase." },
+      { status: 500 }
+    );
   }
 
+  await supabase.auth.signOut();
   return NextResponse.json({ success: true, signOutRequired: true });
 }

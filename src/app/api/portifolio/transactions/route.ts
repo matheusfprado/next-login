@@ -1,13 +1,12 @@
-import { getServerSession } from "next-auth";
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 
-import { authOptions } from "@/lib/authOptions";
+import { getCurrentSession } from "@/lib/supabase";
 import { prisma } from "@/lib/prisma";
 import { portfolioTransactionsQuerySchema } from "@/src/modules/portfolio/portfolio.schemas";
 import { serializePortfolioTransaction } from "@/src/modules/portfolio/portfolio.serializers";
 
 export async function GET(request: Request) {
-  const session = await getServerSession(authOptions);
+  const session = await getCurrentSession();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
@@ -39,3 +38,5 @@ export async function GET(request: Request) {
     pageSize,
   });
 }
+
+

@@ -1,7 +1,9 @@
-import NextAuth from "next-auth";
+import { NextResponse } from "next/server";
 
-import { authOptions } from "@/lib/authOptions";
+export function GET() {
+  return NextResponse.json({ error: "Auth route not found" }, { status: 404 });
+}
 
-const handler = NextAuth(authOptions);
-
-export { handler as GET, handler as POST };
+export function POST() {
+  return NextResponse.json({ error: "Auth route not found" }, { status: 404 });
+}

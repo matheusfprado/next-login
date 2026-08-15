@@ -1,18 +1,15 @@
 import { NextResponse } from "next/server";
 
-import { prisma } from "@/lib/prisma";
-import { sendPasswordResetEmail } from "@/src/modules/auth/auth-emails.service";
-import { emailSchema } from "@/src/modules/auth/auth.schemas";
-import { createPasswordResetToken } from "@/src/modules/auth/tokens.service";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { createSupabaseServerClient } from "@/lib/supabase";
+import { emailSchema } from "@/src/modules/auth/auth.schemas";
 
 const genericResponse = {
-  message: "Se o e-mail estiver cadastrado, enviaremos as instruções.",
+  message: "Se o e-mail estiver cadastrado, enviaremos as instrucoes.",
 };
 
 export async function POST(request: Request) {
-  const body: unknown = await request.json().catch(() => null);
-  const parsed = emailSchema.safeParse(body);
+  const parsed = emailSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json(genericResponse);
 
   const allowed = await checkRateLimit({
@@ -23,18 +20,11 @@ export async function POST(request: Request) {
   });
   if (!allowed) return NextResponse.json(genericResponse, { status: 429 });
 
-  const user = await prisma.user.findUnique({
-    where: { email: parsed.data.email },
-    select: { id: true, email: true },
+  const supabase = await createSupabaseServerClient();
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? process.env.NEXTAUTH_URL;
+  await supabase.auth.resetPasswordForEmail(parsed.data.email, {
+    redirectTo: siteUrl ? new URL("/reset-password", siteUrl).toString() : undefined,
   });
-  if (!user?.email) return NextResponse.json(genericResponse);
-
-  try {
-    const token = await createPasswordResetToken(user.id);
-    await sendPasswordResetEmail(user.email, token);
-  } catch (error) {
-    console.error("Erro ao enviar recuperação de senha:", error);
-  }
 
   return NextResponse.json(genericResponse);
 }

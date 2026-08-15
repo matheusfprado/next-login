@@ -1,8 +1,8 @@
-"use client";
+﻿"use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/src/contexts/AuthContext";
 import { Button } from "../../components/Button";
 import {
   ArrowTrendingDownIcon,
@@ -76,7 +76,7 @@ const formatNumber = (value: number, fractionDigits = 4) =>
   }).format(Number.isFinite(value) ? value : 0);
 
 export default function CarteiraPage() {
-  const { status } = useSession();
+  const { status } = useAuth();
   const router = useRouter();
   const { formatCurrency } = useCurrency();
   const [usdBrlRate, setUsdBrlRate] = useState(1);
@@ -1125,3 +1125,4 @@ export default function CarteiraPage() {
     </div>
   );
 }
+

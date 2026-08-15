@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import {
   IconDotsVertical,
@@ -6,7 +6,7 @@ import {
   IconSettings,
   IconUserCircle,
 } from "@tabler/icons-react"
-import { signOut } from "next-auth/react"
+import { useAuth } from "@/src/contexts/AuthContext";
 import { useRouter } from "next/navigation"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/src/components/ui/avatar"
@@ -36,6 +36,7 @@ export function NavUser({
   }
 }) {
   const router = useRouter()
+  const { signOut } = useAuth()
   const { isMobile } = useSidebar()
   const initials = user.name.slice(0, 2).toUpperCase()
 
@@ -90,3 +91,4 @@ export function NavUser({
     </SidebarMenu>
   )
 }
+
